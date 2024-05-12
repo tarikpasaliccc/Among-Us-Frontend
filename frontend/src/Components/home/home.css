@@ -1,0 +1,152 @@
+.vh-100 {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+}
+
+.form-control {
+    width: 170px;
+    height: 28px;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    font-family: monospace;
+    font-size: 15px;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.2);
+    margin-right: 30px;
+}
+
+.form-control:hover {
+    border-color: #D9D9D9;
+    box-shadow: 0 0 10px #D9D9D9;
+}
+
+.form-control:focus {
+    border-color: #D9D9D9;
+    box-shadow: 0 0 10px #D9D9D9;
+}
+
+
+.btn-danger {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    color: red;
+    font-size: 25px;
+    font-family: monospace;
+    animation: glow 1s infinite alternate;
+    cursor: pointer;
+    background: none;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 10px red; /* Textschatten in Rot */
+    }
+    to {
+        text-shadow: 0 0 20px red, 0 0 30px red, 0 0 40px red, 0 0 50px red; /* Textschatten mit Leuchteffekt */
+    }
+}
+
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 90vh;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Ändern Sie die Höhe auf 100vh */
+    background-image: url('./homebackground2.jpg'); /* Hintergrundbild */
+    background-size: cover; /* Bildgröße anpassen */
+    background-position: center; /* Bildposition zentrieren */
+}
+
+
+.content {
+    text-align: center;
+}
+
+.logo {
+    width: 700px;
+    height: auto;
+    margin-bottom: 40px;
+    cursor: default;
+
+}
+
+.menu a {
+    font-family: Gill Sans, sans-serif;
+    color: white;
+    font-size: 30px;
+    transform: rotate(90deg);
+    margin-bottom: 180px;
+}
+
+.menu {
+    position: fixed;
+    right: 10px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+}
+
+.home-button {
+    position: fixed;
+    top: 20px;
+    left: 40px;
+    width: 50px;
+    height: 50px;
+    font-size: 40px;
+    color: black;
+    text-decoration: none;
+    background-color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.home-button:hover {
+    border-color: #D9D9D9;
+    box-shadow: 0 0 10px #D9D9D9;
+}
+
+.error-message {
+    color: #721c24; /* darker red for better readability */
+    background-color: #f8d7da; /* lighter red for softer warning */
+    border-color: #f5c6cb; /* matching border color */
+    padding: 10px;
+    display: inline-block;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    margin-top: 10px;
+    font-size: 14px; /* slightly smaller font for the error message */
+    text-align: left;
+    box-shadow: 0 0 5px 0 rgba(0,0,0,0.2); /* subtle shadow for depth */
+}
+
+.error-message span {
+    display: block; /* make each sentence a block to ensure it's on its own line */
+    margin-bottom: 10px; /* space between sentences */
+}
+
+
+
+
+

@@ -1,0 +1,64 @@
+.room-page {
+    text-align: center;
+    margin: 20px;
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.player-cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding-bottom: 100px;
+}
+
+.player-card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    width: 200px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h1 {
+    color: white;
+    font-size: 2em;
+    margin-top: 20px;
+}
+
+.refresh-btn {
+    display: block;
+    margin: 20px auto;
+}
+
+.button-container {
+    position: fixed;
+    bottom: 20px;
+    width: calc(100% - 40px);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    box-sizing: border-box;
+}
+
+button {
+    font-size: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.leave-room-btn {
+    background-color: #007bff;
+}
+
+.start-game-btn {
+    background-color: #28a745;
+}

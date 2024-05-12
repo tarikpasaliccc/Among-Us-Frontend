@@ -1,0 +1,64 @@
+.among-us-loading-screen {
+    width: 100%;
+    height: 100vh;
+    background-color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-text {
+    color: white;
+    font-size: 50px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    position: absolute;
+    top: 85%;
+    left: 75%;
+}
+
+.loading-text::after {
+    content: "Loading";
+    animation: increaseDots 2.6s infinite;
+    display: inline-block;
+}
+
+@keyframes increaseDots {
+    0%, 100% { content: "Loading..."; }
+    33% { content: "Loading."; }
+    66% { content: "Loading.."; }
+}
+
+@keyframes runningAnimation {
+    0% { background-image: url('./runningAnimations/player1.png'); }
+    9% { background-image: url('./runningAnimations/player2.png'); }
+    18% { background-image: url('./runningAnimations/player3.png'); }
+    27% { background-image: url('./runningAnimations/player4.png'); }
+    36% { background-image: url('./runningAnimations/player5.png'); }
+    45% { background-image: url('./runningAnimations/player6.png'); }
+    54% { background-image: url('./runningAnimations/player7.png'); }
+    63% { background-image: url('./runningAnimations/player8.png'); }
+    72% { background-image: url('./runningAnimations/player9.png'); }
+    81% { background-image: url('./runningAnimations/player10.png'); }
+    90% { background-image: url('./runningAnimations/player11.png'); }
+    100% { background-image: url('./runningAnimations/player12.png'); }
+}
+
+@keyframes runAcrossScreen {
+    0% { left: -100px; }
+    100% { left: 100%; }
+}
+
+.runner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 85px;
+    height: 130px;
+    animation: runAcrossScreen 5s linear infinite, runningAnimation 1s steps(11) infinite;
+}
+
+
+
+
+
