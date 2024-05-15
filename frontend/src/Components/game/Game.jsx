@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import ConfirmationModal from "../ConfirmationModel";
-import React, {useEffect, useRef, useState} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import shipImg from "./assets/ship.png";
 import playerSprite from "./assets/player.png";
 import SockJS from 'sockjs-client';
@@ -15,7 +15,7 @@ import {
     PLAYER_WIDTH,
     TASK_POSITIONS,
 } from "./constants";
-import {useLocation, useNavigate} from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const Game = () => {
@@ -28,8 +28,8 @@ const Game = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const username = location.state?.username;
-    const roles = location.state?.players || []; // Get roles from navigation state
-
+    const roles = location.state?.players || []; // denk an
+    console.log("Location roles %s", roles)
     const stompClientRef = useRef(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReadyToNavigate, setIsReadyToNavigate] = useState(false);
@@ -78,8 +78,9 @@ const Game = () => {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
 
-            const localPlayerRole = roles.find(p => p.id.toString() === playerId)?.role;
-            const localPlayer = createPlayerSprite(scene, sessionId, PLAYER_START_X, PLAYER_START_Y, username, localPlayerRole);
+            const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
+            console.log("Role and PlayerId %s %s", roles, playerId)
+            const localPlayer = createPlayerSprite(scene, sessionId, username, localPlayerRole);
             players.current.set(sessionId, localPlayer);
 
             TASK_POSITIONS.forEach((pos) => {
@@ -117,7 +118,8 @@ const Game = () => {
             stompClientRef.current.connect({}, () => {
                 stompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
                     const playerPosition = JSON.parse(message.body);
-                    const playerRole = roles.find(p => p.id === playerPosition.playerId)?.role;
+                    console.log("Roles log" +  roles )
+                    const playerRole = roles.find(p => p.playerId === playerPosition.playerId)?.role;
                     if (players.current.has(playerPosition.sessionId)) {
                         let playerData = players.current.get(playerPosition.sessionId);
                         let playerSprite = playerData.sprite;
@@ -129,9 +131,8 @@ const Game = () => {
                         playerSprite.x = playerPosition.newPositionX;
                         playerSprite.y = playerPosition.newPositionY;
                         playerSprite.moving = true;
-                        playerData.text.setPosition(playerSprite.x, playerSprite.y - 50);
                     } else {
-                        const newPlayer = createPlayerSprite(scene, playerPosition.sessionId, playerPosition.newPositionX, playerPosition.newPositionY, playerPosition.username, playerRole);
+                        const newPlayer = createPlayerSprite(scene, playerPosition.sessionId, playerPosition.username, playerRole);
                         players.current.set(playerPosition.sessionId, newPlayer);
                     }
                 });
@@ -152,14 +153,21 @@ const Game = () => {
         }
 
         function update() {
+            // Center the camera on the local player's sprite
             this.scene.scene.cameras.main.centerOn(players.current.get(sessionId).sprite.x, players.current.get(sessionId).sprite.y);
 
+            // Update the position of the text objects relative to their respective sprites only if positions have changed
             players.current.forEach((playerData) => {
                 if (playerData.sprite && playerData.text) {
-                    playerData.text.setPosition(playerData.sprite.x, playerData.sprite.y - 50);
+                    const { x, y } = playerData.sprite;
+                    if (playerData.text.x !== x || playerData.text.y !== y - 50) {
+                        console.log(`Updating text position for player ${playerData.username} to (${x}, ${y - 50})`);
+                        playerData.text.setPosition(x, y - 50);
+                    }
                 }
             });
 
+            // Handle player movement and animations
             const playerMoved = movePlayer(pressedKeys.current, players.current.get(sessionId).sprite);
             if (playerMoved) {
                 players.current.get(sessionId).movedLastFrame = true;
@@ -175,6 +183,7 @@ const Game = () => {
                     players.current.get(sessionId).movedLastFrame = false;
                 }
             }
+
             animateMovement(pressedKeys.current, players.current.get(sessionId).sprite);
             players.current.forEach((playerData) => {
                 if (playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
@@ -226,17 +235,21 @@ const Game = () => {
             }
         }
 
-        function createPlayerSprite(scene, sessionId, x, y, username, role) {
-            let newPlayerSprite = scene.add.sprite(x, y, 'player');
+        function createPlayerSprite(scene, sessionId, username, localPlayerRole) {
+            console.log(`Creating player sprite for ${username} at (${PLAYER_START_X}, ${PLAYER_START_Y})`);
+            let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
             newPlayerSprite.displayHeight = PLAYER_HEIGHT;
             newPlayerSprite.displayWidth = PLAYER_WIDTH;
             newPlayerSprite.moving = false;
-            const textColor = role === 'IMPOSTER' ? '#ff0000' : '#127cd9';
-            let newPlayerText = scene.add.text(x, y - 50, username, {
+            console.log("role %s", localPlayerRole);
+
+            const textColor = localPlayerRole === 'IMPOSTER' ? '#ff0000' : '#127cd9';
+            let newPlayerText = scene.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
                 fontSize: '20px',
                 color: textColor,
                 align: 'center'
-            }).setOrigin(0.5, 0.5);
+            }).setOrigin(0.5, 0.5).setDepth(1); // Set depth to ensure text is above other objects
+
             return {
                 sprite: newPlayerSprite,
                 text: newPlayerText,

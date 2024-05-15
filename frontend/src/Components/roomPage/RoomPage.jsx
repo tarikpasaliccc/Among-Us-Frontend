@@ -28,11 +28,11 @@ function RoomPage() {
     }, [roomId]);
 
     useEffect(() => {
-        fetchRoomData();
+        fetchRoomData().then(r =>   console.log('Fetched room data'));
     }, [fetchRoomData]);
 
     const refreshPlayers = () =>{
-        fetchRoomData();
+        fetchRoomData().then(r => console.log('Refreshed players'));
     }
 
 
@@ -52,9 +52,11 @@ function RoomPage() {
         navigate('/rooms');
     }
 
-    function handleStartGame() {
+    const handleStartGame = async () => {
+
+
         sessionStorage.setItem('roomId', roomId);
-        axios.post('http://localhost:8080/api/player/assignRoles', {
+        await axios.post('http://localhost:8080/api/player/assignRoles', {
             token: token,
             sessionId: sessionId,
             roomId: roomId
@@ -65,7 +67,8 @@ function RoomPage() {
             console.error('Error assigning roles:', error);
             alert('Error assigning roles');
         });
-    }
+    };
+
 
     const isHost = hostSessionsId === sessionId;
     const isStartGameEnabled = isHost && players.length >= 4;

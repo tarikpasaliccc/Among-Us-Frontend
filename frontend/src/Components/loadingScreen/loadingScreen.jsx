@@ -4,7 +4,6 @@ import {useEffect, useRef} from "react";
 import SockJS from "sockjs-client";
 import Stomp from 'webstomp-client';
 
-
 function LoadingScreen() {
     const stompClientRef = useRef(null);
     const sessionId = sessionStorage.getItem('sessionId');
@@ -21,20 +20,22 @@ function LoadingScreen() {
         stompClientRef.current.connect({}, () => {
             stompClientRef.current.subscribe(`/topic/startGame/${roomId}`, (message) => {
                 const gameInfo = JSON.parse(message.body);
-                if (gameInfo.roomId === roomId && gameInfo.started){
+                if (gameInfo.roomId === roomId && gameInfo.started) {
                     console.log('Game started');
                 }
             });
 
-            stompClientRef.current.send('/app/startGame', JSON.stringify({
-                token: token,
-                sessionId: sessionId,
-                roomId: roomId
-            }), {});
+            setTimeout(() => {
+                stompClientRef.current.send('/app/startGame', JSON.stringify({
+                    token: token,
+                    sessionId: sessionId,
+                    roomId: roomId
+                }), {});
+            }, 500);
         });
 
         const timeout = setTimeout(() => {
-            navigate("/game", {state : {username : username}});
+            navigate("/game", {state: {username: username, players : location.state.players}});
         }, 5000);
 
         return () => {
@@ -43,9 +44,7 @@ function LoadingScreen() {
             }
             clearTimeout(timeout);
         };
-    }, [navigate, roomId, sessionId, token]);
-
-
+    }, [navigate, roomId, sessionId, token, username]);
 
     return (
         <div className="among-us-loading-screen">
@@ -54,6 +53,5 @@ function LoadingScreen() {
         </div>
     );
 }
-
 
 export default LoadingScreen;
