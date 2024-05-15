@@ -10,8 +10,8 @@ function LoadingScreen() {
     const sessionId = sessionStorage.getItem('sessionId');
     const token = sessionStorage.getItem('jwtToken');
     const roomId = sessionStorage.getItem('roomId');
-    const location = useLocation();
     const navigate = useNavigate();
+    const location = useLocation();
     const username = location.state?.username;
 
     useEffect(() => {
@@ -34,7 +34,7 @@ function LoadingScreen() {
         });
 
         const timeout = setTimeout(() => {
-            navigate("/game");
+            navigate("/game", {state : {username : username}});
         }, 5000);
 
         return () => {

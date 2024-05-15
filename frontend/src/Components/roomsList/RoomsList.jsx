@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import axios from "axios";
-import {useNavigate} from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import "./rooms.css"
 
 function RoomList() {
@@ -10,6 +10,10 @@ function RoomList() {
     const navigate = useNavigate();
     const token = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
+    const location = useLocation();
+    const username = location.state?.username;
+
+
 
 
     const fetchRooms = useCallback(async () => {
@@ -31,7 +35,7 @@ function RoomList() {
 
 
     useEffect(() => {
-        fetchRooms();
+        fetchRooms().then(r => console.log('Fetched rooms'));
     }, [fetchRooms]);
 
     const handleJoinRoom = async (e, roomId) => {
@@ -46,7 +50,7 @@ function RoomList() {
 
             console.log('Joined room successfully:', response.data);
             alert('Joined room successfully');
-            navigate(`/room/${roomId}`);
+            navigate(`/room/${roomId}`, { state: { username: username } });
         } catch (error) {
             console.error('Error joining room:', error);
             alert('Error joining room');
@@ -55,7 +59,7 @@ function RoomList() {
 
 
     const refreshRooms = () => {
-        fetchRooms();
+        fetchRooms().then(r => console.log('Fetched rooms'));
     };
 
     const handleCreateRoom = async () => {

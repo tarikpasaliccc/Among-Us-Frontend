@@ -3,11 +3,11 @@ import logo from './logo.png';
 import icon from './homeicon.png';
 import './home.css';
 import backgroundImage from './homebackground2.jpg'
-import {useNavigate} from "react-router-dom";
 import axios from "axios";
+import {useNavigate} from "react-router-dom";
 
 const Home = () => {
-    const [name, setName] = useState('');
+    const [username, setName] = useState('');
     const navigate = useNavigate();
 
     const handleInputChange = (e) => {
@@ -19,16 +19,14 @@ const Home = () => {
 
         try {
             const response = await axios.post('http://localhost:8080/api/player/save', {
-                username: name}
+                username: username}
             )
             console.log('Joined successfully: ', response.data);
             alert('Joined successfully')
             sessionStorage.setItem('jwtToken', response.data.token);
             sessionStorage.setItem('sessionId', response.data.sessionId);
             sessionStorage.setItem('playerId', response.data.playerId);
-            //TODO: navigate to the rigth page with the right state
-            navigate("/rooms");
-            //navigate("/loadingScreen", { state: { username: name } });
+            navigate("/rooms",{ state: { username: username } });
         } catch (error) {
             if (error.response) {
                 if (error.response.status === 403) {
@@ -68,7 +66,7 @@ const Home = () => {
                         placeholder="Enter Name"
                         maxLength={10}
                         required={true}
-                        value={name}
+                        value={username}
                         onChange={handleInputChange}
                     />
                     <button className="btn btn-danger">play</button>

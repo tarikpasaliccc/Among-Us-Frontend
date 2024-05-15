@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import axios from "axios";
 import './roomPage.css';
 
@@ -11,6 +11,9 @@ function RoomPage() {
     const token = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
     const [hostSessionsId, setHostSessionsId] = useState(null);
+    const location = useLocation();
+    const username = location.state?.username;
+
 
     const fetchRoomData = useCallback( async () => {
         try {
@@ -51,7 +54,17 @@ function RoomPage() {
 
     function handleStartGame() {
         sessionStorage.setItem('roomId', roomId);
-        navigate('/loadingScreen');
+        axios.post('http://localhost:8080/api/player/assignRoles', {
+            token: token,
+            sessionId: sessionId,
+            roomId: roomId
+        }).then(response => {
+            console.log('Roles assigned:', response.data);
+            navigate(`/loadingScreen/`, { state: { username: username, players: response.data.players } });
+        }).catch(error => {
+            console.error('Error assigning roles:', error);
+            alert('Error assigning roles');
+        });
     }
 
     const isHost = hostSessionsId === sessionId;
