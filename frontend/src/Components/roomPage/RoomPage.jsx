@@ -105,7 +105,3 @@ function RoomPage() {
 
 
 export default RoomPage;
-
-//ToDo: When a player closes the tab, the player should be removed from the room
-//ToDo: When the host closes the tab, the room should be deleted
-//ToDo: When the host starts the game, the game should start for all players in the room
