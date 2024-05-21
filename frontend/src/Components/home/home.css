@@ -13,7 +13,7 @@
 }
 
 .form-control {
-    width: 170px;
+    width: 190px !important;
     height: 28px;
     padding: 10px;
     border: none;
@@ -57,14 +57,14 @@
 }
 
 
-.container {
+.home-container {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 90vh;
 }
 
-.container {
+.home-container {
     display: flex;
     justify-content: center;
     align-items: center;

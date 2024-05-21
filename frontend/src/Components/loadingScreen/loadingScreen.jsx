@@ -10,12 +10,14 @@ function LoadingScreen() {
     const sessionId = sessionStorage.getItem('sessionId');
     const token = sessionStorage.getItem('jwtToken');
     const roomId = sessionStorage.getItem('roomId');
+    const playerId = sessionStorage.getItem('playerId');
     const location = useLocation();
     const navigate = useNavigate();
-    const username = location.state?.username;
+    const username = sessionStorage.getItem('username');
 
     useEffect(() => {
-        const socket = new SockJS('http://localhost:8080/ws');
+        console.log('Connecting to websocket with username:', username);
+        const socket = new SockJS('http://localhost:8081/ws/gameRoom');
         stompClientRef.current = Stomp.over(socket);
 
         stompClientRef.current.connect({}, () => {
@@ -27,9 +29,9 @@ function LoadingScreen() {
             });
 
             stompClientRef.current.send('/app/startGame', JSON.stringify({
-                token: token,
-                sessionId: sessionId,
-                roomId: roomId
+                roomId: roomId,
+                playerId: playerId,
+                username: username
             }), {});
         });
 

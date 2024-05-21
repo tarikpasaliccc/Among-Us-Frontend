@@ -18,7 +18,7 @@ const Home = () => {
         e.preventDefault();
 
         try {
-            const response = await axios.post('http://localhost:8080/api/player/save', {
+            const response = await axios.post('http://localhost:8084/api/player/save', {
                 username: name}
             )
             console.log('Joined successfully: ', response.data);
@@ -26,9 +26,8 @@ const Home = () => {
             sessionStorage.setItem('jwtToken', response.data.token);
             sessionStorage.setItem('sessionId', response.data.sessionId);
             sessionStorage.setItem('playerId', response.data.playerId);
-            //TODO: navigate to the rigth page with the right state
-            navigate("/rooms");
-            //navigate("/loadingScreen", { state: { username: name } });
+            sessionStorage.setItem('username', name);
+            navigate("/rooms", { state: { username: name } });
         } catch (error) {
             if (error.response) {
                 if (error.response.status === 403) {
@@ -43,7 +42,7 @@ const Home = () => {
     }
 
     return (
-        <div className="container" style={{
+        <div className="home-container" style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',

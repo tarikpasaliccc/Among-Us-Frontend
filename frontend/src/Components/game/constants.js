@@ -21,7 +21,10 @@ export const TASK_POSITIONS = [
     { x: -255, y: 320 },
     { x: 20, y: 235 },
     { x: -49, y: 500 },
+];
 
+export const EMERGENCY_TASK_POSITIONS = [
+    {x: 346, y: -28}
 ];
 
 
