@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import axios from "axios";
 import './roomPage.css';
 
@@ -10,12 +10,15 @@ function RoomPage() {
     const navigate = useNavigate();
     const token = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
+    const playerId = sessionStorage.getItem('playerId');
+    const location = useLocation();
+    const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
 
     const fetchRoomData = useCallback( async () => {
         try {
             console.log('Fetching room data for room:', roomId)
-            const response = await axios.get(`http://localhost:8080/api/gameRooms/getGameRoom/${roomId}`);
+            const response = await axios.get(`http://localhost:8081/api/gameRooms/getGameRoom/${roomId}`);
             console.log('Room data:', response);
             setPlayers(response.data.players);
             setHostSessionsId(response.data.createdBy);
@@ -36,17 +39,17 @@ function RoomPage() {
     function handleLeaveRoom() {
         async function leaveRoom() {
             try {
-                await axios.post('http://localhost:8080/api/gameRooms/leaveGameRoom', {
+                await axios.post('http://localhost:8081/api/gameRooms/leaveGameRoom', {
                     roomId: roomId,
-                    token: token,
-                    sessionId: sessionId
+                    playerId: playerId,
+                    username: username,
                 });
             } catch (error) {
                 console.error('Error leaving room:', error);
             }
         }
         leaveRoom().then(r => console.log('Left room successfully'));
-        navigate('/rooms');
+        navigate('/rooms', {state: {username: username}});
     }
 
     function handleStartGame() {

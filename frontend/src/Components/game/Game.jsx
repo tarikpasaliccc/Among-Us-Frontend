@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import ConfirmationModal from "../ConfirmationModel";
 import React, {useEffect, useRef, useState} from "react";
 import shipImg from "./assets/ship.png";
 import playerSprite from "./assets/player.png";
@@ -14,9 +13,11 @@ import {
     PLAYER_HEIGHT,
     PLAYER_WIDTH,
     TASK_POSITIONS,
+    EMERGENCY_TASK_POSITIONS
 } from "./constants";
-import {useLocation, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import axios from "axios";
+import {useWebSocket} from "../../Context/WebSocketContext";
 
 
 const Game = () => {
@@ -25,33 +26,25 @@ const Game = () => {
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
+    const username = sessionStorage.getItem('username');
     const player = {};
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
 
     const navigate = useNavigate();
-    const location = useLocation();
-    const username = location.state?.username;
+    const movementStompClientRef = useRef(null)
+/*
+    const emergencyStompClientRef = useRef(null)
+*/
+    const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
 
-    const stompClientRef = useRef(null)
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isReadyToNavigate, setIsReadyToNavigate] = useState(false);
 
 
 
     useEffect(() => {
         fetchRoles().then(r => console.log('Roles fetched'));
 
-        const handleBeforeUnload = (e) => {
-            if (!isReadyToNavigate) {
-                setIsModalOpen(true);
-                e.preventDefault();
-                e.returnValue = "";
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
 
 
 
@@ -72,8 +65,12 @@ const Game = () => {
         const game = new Phaser.Game(config);
 
         function preload() {
-            const socket = new SockJS('http://localhost:8080/ws');
-            stompClientRef.current = Stomp.over(socket);
+            const socket = new SockJS('http://localhost:8082/ws/movement');
+            movementStompClientRef.current = Stomp.over(socket);
+
+            // const emergencySocket = new SockJS('http://localhost:8083/ws/chat');
+            // emergencyStompClientRef.current = Stomp.over(emergencySocket);
+
             this.load.image('ship', shipImg);
             this.load.spritesheet('player', playerSprite, {
                 frameWidth: PLAYER_SPRITE_WIDTH,
@@ -86,6 +83,7 @@ const Game = () => {
             });
 
             this.load.image('task', taskImg);
+            this.load.image('emergencyButton', taskImg);
         }
 
         function create() {
@@ -114,6 +112,18 @@ const Game = () => {
                     align: 'center'
                 }).setOrigin(0.5, 0.5);
             }
+
+            const emergencyButtonPos = EMERGENCY_TASK_POSITIONS[0]; // Assuming there's at least one position
+            const emergencyButton = this.add.image(emergencyButtonPos.x, emergencyButtonPos.y, 'emergencyButton');
+            emergencyButton.setScale(0.03);
+            emergencyButton.setInteractive();
+            emergencyButton.on('pointerdown', () => {
+                if (isConnected) {
+                    console.log('Emergency button clicked');
+                    emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {
+                });
+            }
+            });
 
 
             TASK_POSITIONS.forEach((pos) => {
@@ -201,16 +211,18 @@ const Game = () => {
             });
 
 
-            stompClientRef.current.connect({}, () => {
+            movementStompClientRef.current.connect({}, () => {
 
 
-                stompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
+                movementStompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
                     const playerPosition = JSON.parse(message.body);
                     console.log('This is the player position from the server: ' + playerPosition);
                     console.log('This is the session ID from the server: ' + playerPosition.sessionId);
                     console.log('This is the session ID from the client: ' + sessionId);
                     console.log('Position of local player: ' + player.sprite.x + ' ' + player.sprite.y);
+                    console.log('All players: ' + players.current.size);
 
+                if (playerPosition.sessionId) {
                     if (players.current.has(playerPosition.sessionId)) {
                         let playerSprite = players.current.get(playerPosition.sessionId);
                         if (playerPosition.newPositionX < playerSprite.x) { // Moving left
@@ -222,13 +234,18 @@ const Game = () => {
                         playerSprite.x = playerPosition.newPositionX;
                         playerSprite.y = playerPosition.newPositionY;
                         playerSprite.moving = true;
+
                     } else if (playerPosition.sessionId !== sessionId) {
+                        console.log('Creating new player sprite for player: ' + playerPosition.sessionId);
                         createPlayerSprite(this, playerPosition.sessionId, playerPosition.newPositionX, playerPosition.newPositionY);
                         let newPlayerSprite = players.current.get(playerPosition.sessionId);
                         newPlayerSprite.setFlipX(playerPosition.flip);
                     }
+                } else {
+                    console.log('No session ID found in message:');
+                }
                 });
-                stompClientRef.current.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
+                movementStompClientRef.current.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
                     const endMove = JSON.parse(message.body);
                     console.log('Move ended for player: ' + endMove);
                     const playerSprite = players.current.get(endMove.sessionId);
@@ -236,11 +253,18 @@ const Game = () => {
                         playerSprite.moving = false;
                     }
                 });
-                stompClientRef.current.subscribe('/topic/leave', (message) => {
+                movementStompClientRef.current.subscribe('/topic/leave', (message) => {
                     const disconnectedPlayer = JSON.parse(message.body);
                     removePlayerSprite(disconnectedPlayer.sessionId);
                 });
             });
+
+                if (isConnected) {
+                    console.log('Emergency is being called');
+                    emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
+                        navigate('/chat');
+                    });
+                }
 
             function createPlayerSprite(scene, sessionId, playerRole) {
                 let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
@@ -263,21 +287,25 @@ const Game = () => {
             }
 
             const playerMoved = movePlayer(pressedKeys.current, player.sprite);
+
             if (playerMoved) {
                 player.movedLastFrame = true;
             } else {
                 if (player.movedLastFrame) {
-                    if (stompClientRef.current && stompClientRef.current.connected) {
-                        stompClientRef.current.send('/app/moveEnd', JSON.stringify({
-                            token: jwtToken,
-                            sessionId: sessionId,
-                            roomId: roomId
+                    if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                        movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
+                                username: username,
+                                roomId: roomId,
+                                sessionId: sessionId
+
                         }), {});
                     }
                     player.movedLastFrame = false;
                 }
             }
+
             animateMovement(pressedKeys.current, player.sprite)
+
             players.current.forEach((playerSprite, sessionId) => {
                 if (sessionId !== sessionStorage.getItem('sessionId')) { // Don't update the local player in this loop
                     if (playerSprite.moving && !playerSprite.anims.isPlaying) {
@@ -311,13 +339,15 @@ const Game = () => {
         }
 
         function sendMove(direction, flip) {
-            if (stompClientRef.current && stompClientRef.current.connected) {
-                stompClientRef.current.send('/app/move', JSON.stringify({
+            if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                movementStompClientRef.current.send('/app/move', JSON.stringify({
+                    playerId: playerId,
                     direction: direction,
+                    positionX: player.sprite.x,
+                    positionY: player.sprite.y,
                     flip: flip,
-                    token: jwtToken,
-                    sessionId: sessionId,
-                    roomId: roomId
+                    roomId: roomId,
+                    sessionId: sessionId
                 }), {});
             }
         }
@@ -366,45 +396,24 @@ const Game = () => {
         }
 
         return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-            if (stompClientRef.current && stompClientRef.current.connected) {
-                stompClientRef.current.disconnect();
+            if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                movementStompClientRef.current.disconnect();
             }
+            // if (emergencyStompClientRef.current && emergencyStompClientRef.current.connected) {
+            //     console.log('Disconnecting emergency client');
+            //     emergencyStompClientRef.current.disconnect();
+            // }
             game.destroy(true);
         };
-    }, [isModalOpen, isReadyToNavigate, jwtToken, player, playerId, roles, roomId, sessionId, username]);
+    }, [jwtToken, player, playerId, roles, roomId, sessionId, username, navigate]);
 
-    const handleConfirmNavigation = () => {
-        sessionStorage.removeItem('jwtToken');
-        sessionStorage.removeItem('sessionId');
-
-        if (stompClientRef.current && stompClientRef.current.connected) {
-            stompClientRef.current.send('/app/leave', JSON.stringify({
-                token: jwtToken,
-                sessionId: sessionId
-            }), {});
-        }
-        setIsReadyToNavigate(true);
-        navigate('/');
-    };
-
-    const handleCancelNavigation = () => {
-        setIsModalOpen(false);
-    }
 
     return(
         <div id="game-container">
-            {isModalOpen && (
-                <ConfirmationModal
-                    isOpen={isModalOpen}
-                    onConfirm={handleConfirmNavigation}
-                    onCancel={handleCancelNavigation}
-                    message="Are you sure you want to leave the game?"
-                />
-            )}
+
             <canvas/>
         </div>
     );
-};
+}
 
 export default Game;
