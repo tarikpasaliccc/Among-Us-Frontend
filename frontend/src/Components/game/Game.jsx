@@ -1,11 +1,13 @@
 import Phaser from "phaser";
 import ConfirmationModal from "../ConfirmationModel";
-import React, {useEffect, useRef, useState} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import shipImg from "./assets/ship.png";
 import playerSprite from "./assets/player.png";
 import SockJS from 'sockjs-client';
 import Stomp from 'webstomp-client';
 import taskImg from "./assets/task.png";
+import killBtnEnabledImg from "./assets/kill-btn-enabled.png";
+import killBtnDisabledImg from "./assets/kill-btn-disabled.png";
 import {
     PLAYER_SPRITE_HEIGHT,
     PLAYER_SPRITE_WIDTH,
@@ -15,33 +17,61 @@ import {
     PLAYER_WIDTH,
     TASK_POSITIONS,
 } from "./constants";
-import {useLocation, useNavigate} from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-
 const Game = () => {
-
     const jwtToken = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
-    const player = {};
+    const player = {};  // Make sure player object has necessary properties
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
-
     const navigate = useNavigate();
     const location = useLocation();
     const username = location.state?.username;
-
-    const stompClientRef = useRef(null)
+    const stompClientRef = useRef(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReadyToNavigate, setIsReadyToNavigate] = useState(false);
+    const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
 
+    // Function to handle elimination
+    async function updateElimination(player, action, targetPlayer) {
+        try {
+            const response = await axios.post('http://localhost:8080/api/player/action', {
+                player: player,
+                action: action,
+                targetPlayer: targetPlayer
+            });
+            console.log('Action performed successfully:', response.data);
+        } catch (error) {
+            console.error('Error performing action:', error);
+        }
+    }
 
+    // Example function to handle elimination button click
+    const handleEliminationClick = () => {
+        const action = 'eliminate'; // Define the action type
+        const targetPlayer = { id: 'targetPlayerId' }; // Define the target player
+        updateElimination(player, action, targetPlayer).then(r => console.log('Player eliminated'));
+    };
 
     useEffect(() => {
         fetchRoles().then(r => console.log('Roles fetched'));
+
+        stompClientRef.current.subscribe(`/topic/nearPlayer/${roomId}`, (message) => {
+            const nearPlayer = JSON.parse(message.body);
+            console.log('Near player:', nearPlayer);
+            setIsKillBtnEnabled(nearPlayer);
+            const killButton = document.getElementById('elimination-button');
+            if (nearPlayer) {
+                killButton.style.display = 'block';
+            } else {
+                killButton.style.display = 'none';
+            }
+        });
 
         const handleBeforeUnload = (e) => {
             if (!isReadyToNavigate) {
@@ -52,8 +82,6 @@ const Game = () => {
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);
-
-
 
         const config = {
             type: Phaser.WEBGL,
@@ -66,8 +94,6 @@ const Game = () => {
                 update: update
             }
         };
-
-
 
         const game = new Phaser.Game(config);
 
@@ -96,18 +122,16 @@ const Game = () => {
             // Set the role of the player to the role assigned by the server
             player.role = roles.find(p => p.id.toString() === playerId)?.role;
 
-
-
             // Create a text object for the username directly above the player sprite
-            if(player.role === 'IMPOSTER' ){
-                console.log('This role should be Imposter: ' + player.role)
+            if (player.role === 'IMPOSTER') {
+                console.log('This role should be Imposter: ' + player.role);
                 player.text = this.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
                     fontSize: '20px',
                     color: '#ff0000',
                     align: 'center'
                 }).setOrigin(0.5, 0.5);
             } else {
-                console.log('This role should be Crewmate: ' + player.role)
+                console.log('This role should be Crewmate: ' + player.role);
                 player.text = this.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
                     fontSize: '20px',
                     color: '#127cd9',
@@ -115,14 +139,12 @@ const Game = () => {
                 }).setOrigin(0.5, 0.5);
             }
 
-
             TASK_POSITIONS.forEach((pos) => {
                 const task = this.add.image(pos.x, pos.y, 'task');
                 task.setScale(0.03);
                 task.setInteractive();
                 task.on('pointerdown', () => {
                     showTaskPopup(this, task);
-
                 });
             });
 
@@ -167,11 +189,9 @@ const Game = () => {
                 });
             }
 
-
-
-            // Tastatureingaben abfangen
+            // Capture keyboard inputs
             this.input.keyboard.on('keydown', (event) => {
-                // Tastatureingaben bearbeiten
+                // Handle keyboard inputs
             });
 
             players.current.set(sessionId, player.sprite);
@@ -181,7 +201,7 @@ const Game = () => {
                 frames: this.anims.generateFrameNumbers('player'),
                 frameRate: 24,
                 repeat: -1
-            })
+            });
 
             this.input.keyboard.on('keydown', (event) => {
                 if (!pressedKeys.current.includes(event.code)) {
@@ -200,10 +220,7 @@ const Game = () => {
                 }
             });
 
-
             stompClientRef.current.connect({}, () => {
-
-
                 stompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
                     const playerPosition = JSON.parse(message.body);
                     console.log('This is the player position from the server: ' + playerPosition);
@@ -249,8 +266,6 @@ const Game = () => {
                 newPlayerSprite.moving = false;
                 newPlayerSprite.role = playerRole;
                 players.current.set(sessionId, newPlayerSprite);
-
-
             }
         }
 
@@ -277,7 +292,7 @@ const Game = () => {
                     player.movedLastFrame = false;
                 }
             }
-            animateMovement(pressedKeys.current, player.sprite)
+            animateMovement(pressedKeys.current, player.sprite);
             players.current.forEach((playerSprite, sessionId) => {
                 if (sessionId !== sessionStorage.getItem('sessionId')) { // Don't update the local player in this loop
                     if (playerSprite.moving && !playerSprite.anims.isPlaying) {
@@ -290,7 +305,7 @@ const Game = () => {
         }
 
         function movePlayer(pressedKeys, sprite) {
-            let playerMoved = false
+            let playerMoved = false;
 
             if (pressedKeys.includes('ArrowUp')) {
                 sendMove('UP', sprite.flipX);
@@ -322,23 +337,21 @@ const Game = () => {
             }
         }
 
-
-        function animateMovement (keys, player){
+        function animateMovement(keys, player) {
             const runningKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
-            if(
+            if (
                 keys.some((key) => runningKeys.includes(key)) &&
                 !player.anims.isPlaying
-            ){
+            ) {
                 player.play('running');
             } else if (
                 !keys.some((key) => runningKeys.includes(key)) &&
                 player.anims.isPlaying
-            ){
+            ) {
                 player.stop('running');
             }
         }
-
 
         function removePlayerSprite(sessionId) {
             let playerSprite = players.current.get(sessionId);
@@ -348,16 +361,14 @@ const Game = () => {
             }
         }
 
-
-
         async function fetchRoles() {
             try {
                 const response = await axios.post('http://localhost:8080/player/assignRoles', {
                     token: jwtToken,
                     sessionId: sessionId
-                })
+                });
                 console.log('Roles assigned:', response);
-                const roles = response.data.players.map(player => ({id: player.playerId, role: player.role}));
+                const roles = response.data.players.map(player => ({ id: player.playerId, role: player.role }));
                 console.log('Roles:', roles);
                 setRoles(roles);
             } catch (error) {
@@ -390,9 +401,9 @@ const Game = () => {
 
     const handleCancelNavigation = () => {
         setIsModalOpen(false);
-    }
+    };
 
-    return(
+    return (
         <div id="game-container">
             {isModalOpen && (
                 <ConfirmationModal
@@ -402,6 +413,13 @@ const Game = () => {
                     message="Are you sure you want to leave the game?"
                 />
             )}
+            <img
+                id="elimination-button"
+                src={isKillBtnEnabled ? killBtnEnabledImg : killBtnDisabledImg}
+                alt="Eliminate"
+                onClick={isKillBtnEnabled ? handleEliminationClick : null}
+                style={{display: isKillBtnEnabled ? 'block' : 'none'}}
+            />
             <canvas/>
         </div>
     );
