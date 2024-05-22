@@ -35,7 +35,7 @@ function LoadingScreen() {
         });
 
         const timeout = setTimeout(() => {
-            navigate("/game", {state: {username: username, players : location.state.players}});
+            navigate("/game");
         }, 5000);
 
         return () => {

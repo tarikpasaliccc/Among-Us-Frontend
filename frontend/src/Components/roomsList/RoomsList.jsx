@@ -12,13 +12,14 @@ function RoomList() {
     const sessionId = sessionStorage.getItem('sessionId');
     const location = useLocation();
     const username = location.state?.username;
+    const roomId = sessionStorage.getItem('roomId');
 
 
 
 
     const fetchRooms = useCallback(async () => {
         try {
-            const response = await axios.get('http://localhost:8080/api/gameRooms/getGameRooms');
+            const response = await axios.get('http://localhost:8081/api/gameRooms/getGameRooms');
             console.log('Rooms Response:', response.data);
             const roomsData = response.data;
             if (Array.isArray(roomsData)) {
@@ -42,7 +43,7 @@ function RoomList() {
         e.preventDefault();
 
         try {
-            const response = await axios.post('http://localhost:8080/api/gameRooms/joinGameRoom', {
+            const response = await axios.post('http://localhost:8081/api/gameRooms/joinGameRoom', {
                 roomId: roomId,
                 token: token,
                 sessionId: sessionId
@@ -69,7 +70,7 @@ function RoomList() {
         }
 
         try {
-            const response = await axios.post(`http://localhost:8080/api/gameRooms/createGameRoom`, {
+            const response = await axios.post(`http://localhost:8081/api/gameRooms/createGameRoom`, {
                 token: token,
                 sessionId: sessionId,
                 roomName: newRoomName
@@ -95,7 +96,7 @@ function RoomList() {
         }
 
         try {
-            const response = await axios.delete(`http://localhost:8080/api/gameRooms/deleteGameRoom`, {
+            const response = await axios.delete(`http://localhost:8081/api/gameRooms/deleteGameRoom`, {
                 params: {
                     roomId: roomId,
                     token: token,

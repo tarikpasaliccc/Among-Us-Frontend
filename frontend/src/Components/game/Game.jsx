@@ -24,11 +24,11 @@ const Game = () => {
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
+    const username = sessionStorage.getItem('username');
     const players = useRef(new Map());
     const pressedKeys = useRef([]);
     const navigate = useNavigate();
     const location = useLocation();
-    const username = location.state?.username;
     const roles = location.state?.players || [];
     const stompClientRef = useRef(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,7 +60,7 @@ const Game = () => {
         const game = new Phaser.Game(config);
 
         function preload() {
-            const socket = new SockJS('http://localhost:8080/ws');
+            const socket = new SockJS('http://localhost:8082/ws/movement');
             stompClientRef.current = Stomp.over(socket);
             this.load.image('ship', shipImg);
             this.load.spritesheet('player', playerSprite, {
@@ -245,6 +245,7 @@ const Game = () => {
         }
 
         function createPlayerSprite(scene, sessionId, username, role, localPlayerRole) {
+            console.log('Creating player sprite with username:', username, 'and role:', role)
             let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
             newPlayerSprite.displayHeight = PLAYER_HEIGHT;
             newPlayerSprite.displayWidth = PLAYER_WIDTH;
@@ -273,6 +274,9 @@ const Game = () => {
 
                 }
             }).setOrigin(0.5, 0.5).setDepth(1);
+
+            //Add the player text to the playersprite
+            newPlayerSprite.text = username;
 
             return {
                 sprite: newPlayerSprite,
@@ -308,7 +312,7 @@ const Game = () => {
                 popup.destroy();
                 text.destroy();
                 closeButton.destroy();
-                finishButton.destroy();
+                   finishButton.destroy();
             });
         }
 
