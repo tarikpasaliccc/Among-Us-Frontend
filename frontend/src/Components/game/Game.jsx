@@ -77,9 +77,15 @@ const Game = () => {
 
             let localPlayerRole;
             const playerRoles = JSON.parse(playerRoleList);
-            Object.keys(playerRoles).forEach((key) => {
-                if(playerId == playerRoles[key].playerId) localPlayerRole = playerRoles[key].role;
-            });
+            console.log("Player Roles: ", playerRoles);
+
+            for (let i = 0; i < playerRoles.length; i++) {
+                if (playerId == playerRoles[i].playerId) {
+                    localPlayerRole = playerRoles[i].role;
+                    break;
+                }
+            }
+
             const localPlayer = createPlayerSprite(scene, sessionId, username, localPlayerRole );
             players.current.set(sessionId, localPlayer);
 
