@@ -262,7 +262,7 @@ const Game = () => {
                 if (isConnected) {
                     console.log('Emergency is being called');
                     emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
-                        navigate('/chat');
+                        navigate('/emergencyMeeting');
                     });
                 }
 
