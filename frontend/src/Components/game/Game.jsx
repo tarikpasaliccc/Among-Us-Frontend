@@ -25,7 +25,7 @@ const Game = () => {
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
     const username = sessionStorage.getItem('username');
-    const role = sessionStorage.getItem('role');
+    const playerRoleList = sessionStorage.getItem('role');
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
@@ -75,8 +75,12 @@ const Game = () => {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
 
-            //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
-            const localPlayer = createPlayerSprite(scene, sessionId, username, role);
+            let localPlayerRole;
+            const playerRoles = JSON.parse(playerRoleList);
+            Object.keys(playerRoles).forEach((key) => {
+                if(playerId == playerRoles[key].playerId) localPlayerRole = playerRoles[key].role;
+            });
+            const localPlayer = createPlayerSprite(scene, sessionId, username, localPlayerRole );
             players.current.set(sessionId, localPlayer);
 
             TASK_POSITIONS.forEach((pos) => {
@@ -262,12 +266,11 @@ const Game = () => {
             newPlayerSprite.displayWidth = PLAYER_WIDTH;
             newPlayerSprite.moving = false;
 
-            // Determine text color based on role
-            let textColor = '#ffffff'; // Default to white
+            let textColor = '#ffffff';
             if (role === 'IMPOSTER') {
                 textColor = role === 'IMPOSTER' ? '#ff0000' : '#ffffff'; // Imposter sees other imposters in red
             } else if (role === 'CREWMATE') {
-                textColor = '#ffffff'; // Crewmates see everyone in white
+                textColor = '#ffffff';
             }
 
             let newPlayerText = scene.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
