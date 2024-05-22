@@ -1,11 +1,12 @@
 import "./chat.css";
-import { useEffect, useRef, useState } from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import SockJS from "sockjs-client";
 import Stomp from "webstomp-client";
 import { useNavigate } from "react-router-dom";
-import {useWebSocket} from "../../Context/WebSocketContext";
+import { useWebSocket } from "../../../Context/WebSocketContext";
+import axios from "axios";
 
-const Chat = () => {
+const Chat = ({ onClose }) => {
     const stompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
     const sessionId = sessionStorage.getItem('sessionId');
@@ -14,7 +15,6 @@ const Chat = () => {
     const playerId = sessionStorage.getItem('playerId');
     const navigate = useNavigate();
     const username = sessionStorage.getItem('username');
-    const players = [];
 
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
@@ -42,7 +42,7 @@ const Chat = () => {
                 stompClientRef.current.disconnect();
             }
         };
-    }, [roomId, username]);
+    }, [isConnected, roomId]);
 
     const sendMessage = () => {
         if (message.trim() !== '' && stompClientRef.current && stompClientRef.current.connected) {
@@ -63,41 +63,36 @@ const Chat = () => {
         }
     };
 
-    function votePlayer(id) {
-
-    }
-
     return (
-        <div className="main-chat-container">
-            <div className="chat-container">
-                <div className="chat-history">
-                    {chatHistory.map((msg, index) => (
-                        <div key={index} className={`chat-message ${msg.sender === username ? 'own-message' : 'other-player-message'}`}>
-                            <div className="text-message">
-                                <strong>{msg.sender === username ? 'You' : msg.sender}</strong>
-                                <br /> {msg.content}
+        <div className="chat-popup-overlay">
+            <div className="chat-popup-box">
+                <button className="close-button" onClick={onClose}>X</button>
+                <div className="chat-container">
+                    <div className="chat-history">
+                        {chatHistory.map((msg, index) => (
+                            <div
+                                key={index}
+                                className={`chat-message ${msg.sender === username ? 'own-message' : 'other-player-message'}`}
+                            >
+                                <div className="text-message">
+                                    <strong>{msg.sender === username ? 'You' : msg.sender}</strong>
+                                    <br /> {msg.content}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="chat-input">
-                    <input
-                        type="text"
-                        placeholder="Enter your message"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                    />
-                    <button onClick={sendMessage}>Send</button>
-                </div>
-            </div>
-            <div className="voting-container">
-                {players.map((player, index) => (
-                    <div key={index} className="player-card" onClick={() => votePlayer(player.id)}>
-                        <img src={player.avatar} alt={`${player.name} avatar`} />
-                        <div className="player-name">{player.name}</div>
+                        ))}
                     </div>
-                ))}
+                    <div className="chat-input">
+                        <input
+                            className="chat-input-field"
+                            type="text"
+                            placeholder="Enter your message"
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                        />
+                        <button className="chat-button" onClick={sendMessage}>Send</button>
+                    </div>
+                </div>
             </div>
         </div>
     );
