@@ -63,7 +63,7 @@ const Home = () => {
                 <form className="input-group" onSubmit={handleSubmit}>
                     <input
                         type="text"
-                        className="form-control"
+                        className="home-form-control"
                         placeholder="Enter Name"
                         maxLength={10}
                         required={true}

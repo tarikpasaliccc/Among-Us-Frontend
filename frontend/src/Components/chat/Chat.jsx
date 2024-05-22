@@ -68,7 +68,7 @@ const Chat = () => {
     }
 
     return (
-        <div className="main-container">
+        <div className="main-chat-container">
             <div className="chat-container">
                 <div className="chat-history">
                     {chatHistory.map((msg, index) => (

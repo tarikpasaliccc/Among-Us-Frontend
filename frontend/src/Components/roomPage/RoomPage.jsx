@@ -1,11 +1,13 @@
-import React, {useCallback, useEffect, useState} from 'react';
-import {useLocation, useNavigate, useParams} from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from "axios";
 import './roomPage.css';
-
+import crewImage from './crew.png';
+import reloadImage from './reload-btn.png';
+import exitImage from './exit-btn.png';
 
 function RoomPage() {
-    const {roomId} = useParams();
+    const { roomId } = useParams();
     const [players, setPlayers] = useState([]);
     const navigate = useNavigate();
     const token = sessionStorage.getItem('jwtToken');
@@ -15,7 +17,7 @@ function RoomPage() {
     const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
 
-    const fetchRoomData = useCallback( async () => {
+    const fetchRoomData = useCallback(async () => {
         try {
             console.log('Fetching room data for room:', roomId)
             const response = await axios.get(`http://localhost:8081/api/gameRooms/getGameRoom/${roomId}`);
@@ -31,10 +33,9 @@ function RoomPage() {
         fetchRoomData();
     }, [fetchRoomData]);
 
-    const refreshPlayers = () =>{
+    const refreshPlayers = () => {
         fetchRoomData();
     }
-
 
     function handleLeaveRoom() {
         async function leaveRoom() {
@@ -49,7 +50,7 @@ function RoomPage() {
             }
         }
         leaveRoom().then(r => console.log('Left room successfully'));
-        navigate('/rooms', {state: {username: username}});
+        navigate('/rooms', { state: { username: username } });
     }
 
     function handleStartGame() {
@@ -62,36 +63,41 @@ function RoomPage() {
 
     return (
         <div className="room-page">
-            <h1>Room ID: {roomId}</h1>
+            <div className="top-bar">
+                <h1 className="roomID">ROOM ID: {roomId}</h1>
+                <img src={crewImage} alt="Crew" className="crewImg" />
+                <img src={reloadImage} alt="Reload" className="refresh-btn" onClick={refreshPlayers} />
+            </div>
+            <img src={exitImage} alt="Exit" className="exit-btn" onClick={handleLeaveRoom} />
             <div className="player-cards">
                 {players.length === 0 ? (
                     <p>No players in this room</p>
                 ) : (
                     players.map((player, index) => (
                         <div className="player-card" key={index}>
-                            <h2>{player.username}</h2>
+                            <div className="player-icon"></div>
+                            <span className="player-username">{player.username}</span>
                         </div>
                     ))
                 )}
             </div>
-            <button className="refresh-btn" onClick={refreshPlayers}>Refresh</button>
-            <div className="button-container">
-                <button className="leave-room-btn" onClick={handleLeaveRoom}>Leave Room</button>
-                {/*{isStartGameEnabled && (*/}
-                    <button
-                        className="start-game-btn"
-                        onClick={handleStartGame}
-                    >
-                        Start Game
-                    </button>
-                {/*)}*/}
+            <div className="waiting-text"></div>
+            <div className="button-container-rooms">
+                <button
+                    className="start-game-btn"
+                    onClick={handleStartGame}
+                    disabled={!isStartGameEnabled}
+                >
+                    Start
+                </button>
             </div>
         </div>
     );
+
 }
 
-
 export default RoomPage;
+
 
 //ToDo: When a player closes the tab, the player should be removed from the room
 //ToDo: When the host closes the tab, the room should be deleted

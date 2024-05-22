@@ -10,7 +10,7 @@
 .loading-text {
     color: white;
     font-size: 50px;
-    font-family: Arial, sans-serif;
+    font-family: monospace;
     font-weight: bold;
     position: absolute;
     top: 85%;
