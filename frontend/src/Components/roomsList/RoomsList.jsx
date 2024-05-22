@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import axios from "axios";
 import {useLocation, useNavigate} from "react-router-dom";
 import "./rooms.css"
+import reloadImage from "../roomPage/reload-btn.png";
 
 function RoomList() {
     const [rooms, setRooms] = useState([]);
@@ -12,6 +13,7 @@ function RoomList() {
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const username = sessionStorage.getItem('username');
+    const roomId = sessionStorage.getItem('roomId');
 
 
     const fetchRooms = useCallback(async () => {
@@ -33,7 +35,7 @@ function RoomList() {
 
 
     useEffect(() => {
-        fetchRooms();
+        fetchRooms().then(r => console.log('Fetched rooms'));
     }, [fetchRooms]);
 
     const handleJoinRoom = async (e, roomId) => {
@@ -48,7 +50,7 @@ function RoomList() {
 
             console.log('Joined room successfully:', response.data);
             alert('Joined room successfully');
-            navigate(`/room/${roomId}`, { state: { username: username } }   );
+            navigate(`/room/${roomId}`);
         } catch (error) {
             console.error('Error joining room:', error);
             alert('Error joining room');
@@ -57,7 +59,7 @@ function RoomList() {
 
 
     const refreshRooms = () => {
-        fetchRooms();
+        fetchRooms().then(r => console.log('Fetched rooms'));
     };
 
     const handleCreateRoom = async () => {
@@ -110,50 +112,53 @@ function RoomList() {
     }
 
     return (
-        <div className="main-wrapper">
-            <h1>Join a Room</h1>
-            {!Array.isArray(rooms) || rooms.length === 0 ? (
-                <p>No rooms available, please create a room</p>
-            ) : (
-                <ul className="room-list">
-                    {rooms.map((room) => (
-                        <li key={room.id} className="room-item">
-                            <span>{room.name}</span>
-                            <button className="rooms-btn" onClick={(e) => handleJoinRoom(e, room.id)}>Join</button>
-                            {room.createdBy === sessionId && (
-                                <button className="rooms-btn" id="delete-btn" onClick={(e) => handleDeleteRoom(e, room.id)}>Delete</button>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            )}
-            <div className="main-container">
-                <div className="button-container">
-                    <button onClick={refreshRooms}>Refresh</button>
-                    <button onClick={() => setIsModalOpen(true)}>Create Room</button>
-                </div>
-
-                {isModalOpen && (
-                    <div className="modal">
-                        <h2>Create a New Room</h2>
-                        <input
-                            type="text"
-                            placeholder="Enter room name"
-                            value={newRoomName}
-                            onChange={(e) => setNewRoomName(e.target.value)}
-                        />
-                        <button onClick={handleCreateRoom}>Create</button>
-                        <button onClick={() => setIsModalOpen(false)}>Cancel</button>
-                    </div>
+        <div className="full-page-wrapper">
+            <div className="main-wrapper">
+                <h1 className="joinRoom">Join a Room</h1>
+                <img src={reloadImage} alt="Reload" className="refresh-btn2" onClick={refreshRooms}/>
+                {!Array.isArray(rooms) || rooms.length === 0 ? (
+                    <p>No active rooms, create one yourself ➘</p>
+                ) : (
+                    <ul className="room-list">
+                        {rooms.map((room) => (
+                            <li key={room.id} className="room-item">
+                                <span>{room.name}</span>
+                                <button className="rooms-btn" onClick={(e) => handleJoinRoom(e, room.id)}>join</button>
+                                {room.createdBy === sessionId && (
+                                    <button className="rooms-btn" id="delete-btn"
+                                            onClick={(e) => handleDeleteRoom(e, room.id)}>delete</button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
                 )}
+                <div className="main-container">
+                    <div className="button-container">
+                        <button onClick={() => setIsModalOpen(true)}>Create Room</button>
+                    </div>
 
-                {isModalOpen && <div className="overlay" onClick={() => setIsModalOpen(false)}></div>}
+                    {isModalOpen && (
+                        <div className="modal">
+                            <h2>Create New Room</h2>
+                            <input
+                                type="text"
+                                placeholder="Enter room name"
+                                value={newRoomName}
+                                onChange={(e) => setNewRoomName(e.target.value)}
+                            />
+                            <button onClick={handleCreateRoom} className="createRoom-btn">Create</button>
+                            <button onClick={() => setIsModalOpen(false)}>Cancel</button>
+                        </div>
+                    )}
+
+                    {isModalOpen && <div className="overlay" onClick={() => setIsModalOpen(false)}></div>}
+                </div>
             </div>
         </div>
     );
 
-}
 
+}
 
 
 export default RoomList;

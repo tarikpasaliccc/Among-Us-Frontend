@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import React, {useEffect, useRef, useState} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import shipImg from "./assets/ship.png";
 import playerSprite from "./assets/player.png";
 import SockJS from 'sockjs-client';
@@ -23,21 +23,22 @@ import {useWebSocket} from "../../Context/WebSocketContext";
 
 
 const Game = () => {
+
     const jwtToken = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
     const username = sessionStorage.getItem('username');
-    const player = useRef({});
+    const role = sessionStorage.getItem('role');
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
     const [killBtnDisabled, setKillBtnDisabled] = useState(false);
     const navigate = useNavigate();
     const movementStompClientRef = useRef(null)
-    const {stompClient: emergencyStompClient, isConnected} = useWebSocket();
+    const gameRoomStompClientRef = useRef(null);
+    const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
     const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
-
     // Function to handle elimination
     async function updateElimination(player, action, targetPlayer) {
         try {
@@ -60,7 +61,7 @@ const Game = () => {
     };
 
     useEffect(() => {
-        fetchRoles().then(r => console.log('Roles fetched'));
+
 
         if (movementStompClientRef.current) {
             movementStompClientRef.current.subscribe(`/topic/nearPlayer/${roomId}`, (message) => {
@@ -75,16 +76,6 @@ const Game = () => {
                 }
             });
         }
-
-        const handleBeforeUnload = (e) => {
-            if (!isReadyToNavigate) {
-                setIsModalOpen(true);
-                e.preventDefault();
-                e.returnValue = "";
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
 
         const config = {
             type: Phaser.WEBGL,
@@ -104,6 +95,9 @@ const Game = () => {
             const socket = new SockJS('http://localhost:8082/ws/movement');
             movementStompClientRef.current = Stomp.over(socket);
 
+            const gameRoomSocket = new SockJS('http://localhost:8081/ws/gameRoom');
+            gameRoomStompClientRef.current = Stomp.over(gameRoomSocket);
+
             this.load.image('ship', shipImg);
             this.load.spritesheet('player', playerSprite, {
                 frameWidth: PLAYER_SPRITE_WIDTH,
@@ -120,27 +114,12 @@ const Game = () => {
         }
 
         function create() {
+            const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
-            player.current.sprite = this.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
-            player.current.sprite.displayHeight = PLAYER_HEIGHT;
-            player.current.sprite.displayWidth = PLAYER_WIDTH;
-            player.current.role = roles.find(p => p.id.toString() === playerId)?.role;
 
-            if (player.current.role === 'IMPOSTER') {
-                console.log('This role should be Imposter: ' + player.current.role)
-                player.current.text = this.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
-                    fontSize: '20px',
-                    color: '#ff0000',
-                    align: 'center'
-                }).setOrigin(0.5, 0.5);
-            } else {
-                console.log('This role should be Crewmate: ' + player.current.role)
-                player.current.text = this.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
-                    fontSize: '20px',
-                    color: '#127cd9',
-                    align: 'center'
-                }).setOrigin(0.5, 0.5);
-            }
+            //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
+            const localPlayer = createPlayerSprite(scene, sessionId, username, role);
+            players.current.set(sessionId, localPlayer);
 
             const emergencyButtonPos = EMERGENCY_TASK_POSITIONS[0]; // Assuming there's at least one position
             const emergencyButton = this.add.image(emergencyButtonPos.x, emergencyButtonPos.y, 'emergencyButton');
@@ -163,62 +142,17 @@ const Game = () => {
                 });
             });
 
-            function showTaskPopup(scene, task) {
-                const cam = scene.cameras.main;
+            this.anims.create({
+                key: 'running',
+                frames: this.anims.generateFrameNumbers('player'),
+                frameRate: 24,
+                repeat: -1
+            });
 
-                // Background overlay
-                const bg = scene.add.graphics({fillStyle: {color: 0x000000, alpha: 0.5}});
-                bg.fillRect(0, 0, cam.width, cam.height);
-                bg.setScrollFactor(0);
-
-                // Popup window
-                const popup = scene.add.rectangle(cam.centerX, cam.centerY, 200, 150, 0xffffff);
-                popup.setScrollFactor(0);
-
-                // Task instructions or status text
-                const text = scene.add.text(cam.centerX, cam.centerY - 20, 'Task Status', {
-                    fontSize: '16px',
-                    color: '#000'
-                }).setOrigin(0.5);
-                text.setScrollFactor(0);
-
-                // Finish button
-                const finishButton = scene.add.text(cam.centerX - 80, cam.centerY + 20, 'Finish', {
-                    fontSize: '18px',
-                    color: '#00ff00'
-                }).setInteractive();
-                finishButton.setScrollFactor(0);
-                finishButton.on('pointerdown', () => {
-                    bg.destroy();
-                    popup.destroy();
-                    text.destroy();
-                    closeButton.destroy();
-                    finishButton.destroy();
-                    task.destroy();  // Removes the task from the map
-                });
-
-                // Close button
-                const closeButton = scene.add.text(cam.centerX + 40, cam.centerY + 20, 'Close', {
-                    fontSize: '18px',
-                    color: '#ff0000'
-                }).setInteractive();
-                closeButton.setScrollFactor(0);
-                closeButton.on('pointerdown', () => {
-                    bg.destroy();
-                    popup.destroy();
-                    text.destroy();
-                    closeButton.destroy();
-                    finishButton.destroy();
-                    // Task remains on the map
-                });
-            }
-
-            // Capture keyboard input
             this.input.keyboard.on('keydown', (event) => {
                 if (!pressedKeys.current.includes(event.code)) {
                     pressedKeys.current.push(event.code);
                 }
-
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) {
                     event.preventDefault();
                 }
@@ -227,50 +161,46 @@ const Game = () => {
             this.input.keyboard.on('keyup', (event) => {
                 pressedKeys.current = pressedKeys.current.filter((key) => key !== event.code);
                 if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) {
-                    event.preventDefault();  // Prevent the default action (scrolling)
+                    event.preventDefault();
                 }
-            });
-
-            players.current.set(sessionId, player.current.sprite);
-
-            this.anims.create({
-                key: 'running',
-                frames: this.anims.generateFrameNumbers('player'),
-                frameRate: 24,
-                repeat: -1
             });
 
             movementStompClientRef.current.connect({}, () => {
                 movementStompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
                     const playerPosition = JSON.parse(message.body);
-                    if (playerPosition.sessionId) {
-                        if (players.current.has(playerPosition.sessionId)) {
-                            let playerSprite = players.current.get(playerPosition.sessionId);
-                            if (playerPosition.newPositionX < playerSprite.x) { // Moving left
-                                playerSprite.setFlipX(true);
-                            } else if (playerPosition.newPositionX > playerSprite.x) { // Moving right
-                                playerSprite.setFlipX(false);
-                            }
+                    console.log('Received player position from server:', playerPosition);
 
-                            playerSprite.x = playerPosition.newPositionX;
-                            playerSprite.y = playerPosition.newPositionY;
-                            playerSprite.moving = true;
-
-                        } else if (playerPosition.sessionId !== sessionId) {
-                            createPlayerSprite(this, playerPosition.sessionId, playerPosition.newPositionX, playerPosition.newPositionY);
-                            let newPlayerSprite = players.current.get(playerPosition.sessionId);
-                            newPlayerSprite.setFlipX(playerPosition.flip);
+                    const playerData = players.current.get(playerPosition.sessionId);
+                    if (playerData) {
+                        let playerSprite = playerData.sprite;
+                        if (playerPosition.newPositionX < playerSprite.x) {
+                            playerSprite.setFlipX(true);
+                        } else if (playerPosition.newPositionX > playerSprite.x) {
+                            playerSprite.setFlipX(false);
                         }
+                        playerSprite.x = playerPosition.newPositionX;
+                        playerSprite.y = playerPosition.newPositionY;
+                        playerSprite.moving = true;
                     } else {
-                        console.log('No session ID found in message:');
+                        const playerRole = roles.find(p => p.playerId === playerPosition.playerId)?.role;
+                        const newPlayer = createPlayerSprite(scene, playerPosition.sessionId, playerPosition.username, playerRole);
+                        players.current.set(playerPosition.sessionId, newPlayer);
+                    }
+                });
+
+                gameRoomStompClientRef.current.subscribe(`/topic/join/${roomId}`, (message) => {
+                    const playerData = JSON.parse(message.body);
+                    if (!players.current.has(playerData.sessionId)) {
+                        const newPlayer = createPlayerSprite(scene, playerData.sessionId, playerData.username, playerData.role);
+                        players.current.set(playerData.sessionId, newPlayer);
                     }
                 });
 
                 movementStompClientRef.current.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
                     const endMove = JSON.parse(message.body);
-                    const playerSprite = players.current.get(endMove.sessionId);
-                    if (playerSprite) {
-                        playerSprite.moving = false;
+                    const playerData = players.current.get(endMove.sessionId);
+                    if (playerData) {
+                        playerData.sprite.moving = false;
                     }
                 });
 
@@ -281,6 +211,7 @@ const Game = () => {
             });
 
             if (isConnected) {
+                console.log('Emergency is being called');
                 emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
                     navigate('/chat');
                 });
@@ -288,45 +219,50 @@ const Game = () => {
         }
 
         function update() {
-            this.scene.scene.cameras.main.centerOn(player.current.sprite.x, player.current.sprite.y);
+            const localPlayerData = players.current.get(sessionId);
+            if (localPlayerData && localPlayerData.sprite) {
+                this.scene.scene.cameras.main.centerOn(localPlayerData.sprite.x, localPlayerData.sprite.y);
 
-            if (player.current.sprite && player.current.text) {
-                player.current.text.setPosition(player.current.sprite.x, player.current.sprite.y - 50);
-            }
+                players.current.forEach((playerData) => {
+                    if (playerData.sprite && playerData.text) {
+                        const { x, y } = playerData.sprite;
+                        if (playerData.text.x !== x || playerData.text.y !== y - 50) {
+                            playerData.text.setPosition(x, y - 50);
+                        }
+                    }
+                });
 
-            const playerMoved = movePlayer(pressedKeys.current, player.current.sprite);
+                const playerMoved = movePlayer(pressedKeys.current, localPlayerData.sprite);
+                if (playerMoved) {
+                    localPlayerData.movedLastFrame = true;
+                } else {
+                    if (localPlayerData.movedLastFrame) {
+                        if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                            movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
+                                token: jwtToken,
+                                sessionId: sessionId,
+                                roomId: roomId
+                            }), {});
+                        }
+                        localPlayerData.movedLastFrame = false;
+                    }
+                }
 
-            if (playerMoved) {
-                player.current.movedLastFrame = true;
+                animateMovement(pressedKeys.current, localPlayerData.sprite);
+                players.current.forEach((playerData) => {
+                    if (playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
+                        playerData.sprite.play('running');
+                    } else if (!playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
+                        playerData.sprite.stop('running');
+                    }
+                });
             } else {
-                if (player.current.movedLastFrame) {
-                    if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                        movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
-                            username: username,
-                            roomId: roomId,
-                            sessionId: sessionId
-                        }), {});
-                    }
-                    player.current.movedLastFrame = false;
-                }
+                console.warn('Local player data or sprite is undefined');
             }
-
-            animateMovement(pressedKeys.current, player.current.sprite);
-
-            players.current.forEach((playerSprite, sessionId) => {
-                if (sessionId !== sessionStorage.getItem('sessionId')) {
-                    if (playerSprite.moving && !playerSprite.anims.isPlaying) {
-                        playerSprite.play('running');
-                    } else if (!playerSprite.moving && playerSprite.anims.isPlaying) {
-                        playerSprite.stop('running');
-                    }
-                }
-            });
         }
 
         function movePlayer(pressedKeys, sprite) {
             let playerMoved = false;
-
             if (pressedKeys.includes('ArrowUp')) {
                 sendMove('UP', sprite.flipX);
                 playerMoved = true;
@@ -346,49 +282,110 @@ const Game = () => {
         }
 
         function sendMove(direction, flip) {
-            if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                movementStompClientRef.current.send('/app/move', JSON.stringify({
-                    playerId: playerId,
-                    direction: direction,
-                    positionX: player.current.sprite.x,
-                    positionY: player.current.sprite.y,
-                    flip: flip,
-                    roomId: roomId,
-                    sessionId: sessionId
-                }), {});
+            const localPlayerData = players.current.get(sessionId);
+            if (localPlayerData && localPlayerData.sprite) {
+                if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                    movementStompClientRef.current.send('/app/move', JSON.stringify({
+                        playerId: playerId,
+                        direction: direction,
+                        positionX: localPlayerData.sprite.x,
+                        positionY: localPlayerData.sprite.y,
+                        flip: flip,
+                        roomId: roomId,
+                        sessionId: sessionId
+                    }), {});
+                }
+            } else {
+                console.warn('Local player data or sprite is undefined during move');
             }
         }
 
-        function animateMovement(keys, player) {
+        function animateMovement(keys, sprite) {
             const runningKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-
-            if (keys.some((key) => runningKeys.includes(key)) && !player.anims.isPlaying) {
-                player.play('running');
-            } else if (!keys.some((key) => runningKeys.includes(key)) && player.anims.isPlaying) {
-                player.stop('running');
+            if (keys.some((key) => runningKeys.includes(key)) && !sprite.anims.isPlaying) {
+                sprite.play('running');
+            } else if (!keys.some((key) => runningKeys.includes(key)) && sprite.anims.isPlaying) {
+                sprite.stop('running');
             }
+        }
+
+        function createPlayerSprite(scene, sessionId, username, role) {
+            console.log('Creating player sprite with username:', username, 'and role:', role);
+            let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
+            newPlayerSprite.displayHeight = PLAYER_HEIGHT;
+            newPlayerSprite.displayWidth = PLAYER_WIDTH;
+            newPlayerSprite.moving = false;
+
+            // Determine text color based on role
+            let textColor = '#ffffff'; // Default to white
+            if (role === 'IMPOSTER') {
+                textColor = role === 'IMPOSTER' ? '#ff0000' : '#ffffff'; // Imposter sees other imposters in red
+            } else if (role === 'CREWMATE') {
+                textColor = '#ffffff'; // Crewmates see everyone in white
+            }
+
+            let newPlayerText = scene.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
+                fontSize: '20px',
+                color: textColor,
+                align: 'center',
+                fontStyle: 'bold', // Make the text bold
+                stroke: '#000000', // Add a black stroke (outline) to the text
+                strokeThickness: 3, // Set the thickness of the stroke
+                shadow: {
+                    offsetX: 2, // Set the horizontal offset of the shadow
+                    offsetY: 2, // Set the vertical offset of the shadow
+                    color: '#000000', // Set the color of the shadow
+                    blur: 4, // Set the blur level of the shadow
+                }
+            }).setOrigin(0.5, 0.5).setDepth(1);
+
+            //Add the player text to the playersprite
+            newPlayerSprite.text = username;
+
+            return {
+                sprite: newPlayerSprite,
+                text: newPlayerText,
+                sessionId: sessionId,
+                username: username
+            };
+        }
+
+        function showTaskPopup(scene, task) {
+            const cam = scene.cameras.main;
+            const bg = scene.add.graphics({ fillStyle: { color: 0x000000, alpha: 0.5 } });
+            bg.fillRect(0, 0, cam.width, cam.height);
+            bg.setScrollFactor(0);
+            const popup = scene.add.rectangle(cam.centerX, cam.centerY, 200, 150, 0xffffff);
+            popup.setScrollFactor(0);
+            const text = scene.add.text(cam.centerX, cam.centerY - 20, 'Task Status', { fontSize: '16px', color: '#000' }).setOrigin(0.5);
+            text.setScrollFactor(0);
+            const finishButton = scene.add.text(cam.centerX - 80, cam.centerY + 20, 'Finish', { fontSize: '18px', color: '#00ff00' }).setInteractive();
+            finishButton.setScrollFactor(0);
+            finishButton.on('pointerdown', () => {
+                bg.destroy();
+                popup.destroy();
+                text.destroy();
+                closeButton.destroy();
+                finishButton.destroy();
+                task.destroy();
+            });
+            const closeButton = scene.add.text(cam.centerX + 40, cam.centerY + 20, 'Close', { fontSize: '18px', color: '#ff0000' }).setInteractive();
+            closeButton.setScrollFactor(0);
+            closeButton.on('pointerdown', () => {
+                bg.destroy();
+                popup.destroy();
+                text.destroy();
+                closeButton.destroy();
+                finishButton.destroy();
+            });
         }
 
         function removePlayerSprite(sessionId) {
-            let playerSprite = players.current.get(sessionId);
-            if (playerSprite) {
-                playerSprite.destroy();
+            let playerData = players.current.get(sessionId);
+            if (playerData) {
+                playerData.sprite.destroy();
+                playerData.text.destroy();
                 players.current.delete(sessionId);
-            }
-        }
-
-        async function fetchRoles() {
-            try {
-                const response = await axios.post('http://localhost:8080/player/assignRoles', {
-                    token: jwtToken,
-                    sessionId: sessionId
-                })
-                console.log('Roles assigned:', response);
-                const roles = response.data.players.map(player => ({id: player.playerId, role: player.role}));
-                console.log('Roles:', roles);
-                setRoles(roles);
-            } catch (error) {
-                console.error('Error fetching roles:', error);
             }
         }
 
@@ -398,9 +395,9 @@ const Game = () => {
             }
             game.destroy(true);
         };
-    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate, isConnected, emergencyStompClient]);
+    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
 
-    return (
+    return(
         <div id="game-container">
             <img
                 id="elimination-button"
@@ -409,7 +406,7 @@ const Game = () => {
                 onClick={isKillBtnEnabled ? handleEliminationClick : null}
                 style={{display: isKillBtnEnabled ? 'block' : 'none'}}
             />
-            <canvas/>
+            <canvas />
         </div>
     );
 }
