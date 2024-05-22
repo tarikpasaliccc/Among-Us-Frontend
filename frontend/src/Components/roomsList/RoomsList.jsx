@@ -13,6 +13,7 @@ function RoomList() {
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const username = sessionStorage.getItem('username');
+    const roomId = sessionStorage.getItem('roomId');
 
 
     const fetchRooms = useCallback(async () => {
@@ -34,7 +35,7 @@ function RoomList() {
 
 
     useEffect(() => {
-        fetchRooms();
+        fetchRooms().then(r => console.log('Fetched rooms'));
     }, [fetchRooms]);
 
     const handleJoinRoom = async (e, roomId) => {
@@ -49,7 +50,7 @@ function RoomList() {
 
             console.log('Joined room successfully:', response.data);
             alert('Joined room successfully');
-            navigate(`/room/${roomId}`, { state: { username: username } }   );
+            navigate(`/room/${roomId}`);
         } catch (error) {
             console.error('Error joining room:', error);
             alert('Error joining room');
@@ -58,7 +59,7 @@ function RoomList() {
 
 
     const refreshRooms = () => {
-        fetchRooms();
+        fetchRooms().then(r => console.log('Fetched rooms'));
     };
 
     const handleCreateRoom = async () => {

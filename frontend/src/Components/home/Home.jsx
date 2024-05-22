@@ -7,7 +7,7 @@ import {useNavigate} from "react-router-dom";
 import axios from "axios";
 
 const Home = () => {
-    const [name, setName] = useState('');
+    const [username, setName] = useState('');
     const navigate = useNavigate();
 
     const handleInputChange = (e) => {
@@ -19,7 +19,7 @@ const Home = () => {
 
         try {
             const response = await axios.post('http://localhost:8084/api/player/save', {
-                username: name}
+                username: username}
             )
             console.log('Joined successfully: ', response.data);
             alert('Joined successfully')
@@ -27,7 +27,7 @@ const Home = () => {
             sessionStorage.setItem('sessionId', response.data.sessionId);
             sessionStorage.setItem('playerId', response.data.playerId);
             sessionStorage.setItem('username', name);
-            navigate("/rooms", { state: { username: name } });
+            navigate("/rooms");
         } catch (error) {
             if (error.response) {
                 if (error.response.status === 403) {
@@ -67,7 +67,7 @@ const Home = () => {
                         placeholder="Enter Name"
                         maxLength={10}
                         required={true}
-                        value={name}
+                        value={username}
                         onChange={handleInputChange}
                     />
                     <button className="btn btn-danger">play</button>
