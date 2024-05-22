@@ -26,7 +26,7 @@ const Home = () => {
             sessionStorage.setItem('jwtToken', response.data.token);
             sessionStorage.setItem('sessionId', response.data.sessionId);
             sessionStorage.setItem('playerId', response.data.playerId);
-            sessionStorage.setItem('username', name);
+            sessionStorage.setItem('username', username);
             navigate("/rooms");
         } catch (error) {
             if (error.response) {

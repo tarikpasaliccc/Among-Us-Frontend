@@ -7,7 +7,7 @@ import reloadImage from './reload-btn.png';
 import exitImage from './exit-btn.png';
 
 function RoomPage() {
-    const { roomId } = useParams();
+    const {roomId} = useParams();
     const [players, setPlayers] = useState([]);
     const navigate = useNavigate();
     const token = sessionStorage.getItem('jwtToken');
@@ -16,6 +16,7 @@ function RoomPage() {
     const location = useLocation();
     const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
+
 
     const fetchRoomData = useCallback(async () => {
         try {
@@ -55,21 +56,20 @@ function RoomPage() {
     }
 
     const handleStartGame = async () => {
-
-
         sessionStorage.setItem('roomId', roomId);
-        await axios.post('http://localhost:8080/api/player/assignRoles', {
-            token: token,
-            sessionId: sessionId,
-            roomId: roomId
-        }).then(response => {
-            console.log('Roles assigned:', response.data);
-            navigate(`/loadingScreen/`, { state: { username: username, players: response.data.players } });
-        }).catch(error => {
-            console.error('Error assigning roles:', error);
-            alert('Error assigning roles');
-        });
-    };
+        console.log('Starting game for room:', roomId);
+
+        try {
+            const response = await axios.post(`http://localhost:8081/api/gameRooms/assignRoles/${roomId}`);
+            console.log('Roles were assigned:', response.data);
+            sessionStorage.setItem('role', response.data.role);
+            navigate('/loadingScreen');
+        } catch (error) {
+            console.error('Error starting game:', error);
+        }
+    }
+
+
 
 
     const isHost = hostSessionsId === sessionId;
@@ -100,7 +100,7 @@ function RoomPage() {
                 <button
                     className="start-game-btn"
                     onClick={handleStartGame}
-                    disabled={!isStartGameEnabled}
+                    // disabled={!isStartGameEnabled}
                 >
                     Start
                 </button>

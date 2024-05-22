@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import React, {useEffect, useRef, useState} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import shipImg from "./assets/ship.png";
 import playerSprite from "./assets/player.png";
 import SockJS from 'sockjs-client';
@@ -15,31 +15,26 @@ import {
     TASK_POSITIONS,
     EMERGENCY_TASK_POSITIONS
 } from "./constants";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {useWebSocket} from "../../Context/WebSocketContext";
-
+import { useWebSocket } from "../../Context/WebSocketContext";
 
 const Game = () => {
-
     const jwtToken = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
     const username = sessionStorage.getItem('username');
+    const role = sessionStorage.getItem('role');
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
-
     const navigate = useNavigate();
     const movementStompClientRef = useRef(null)
+    const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
 
-
-
-
     useEffect(() => {
-
         const config = {
             type: Phaser.WEBGL,
             width: window.innerWidth,
@@ -52,13 +47,14 @@ const Game = () => {
             }
         };
 
-
-
         const game = new Phaser.Game(config);
 
         function preload() {
             const socket = new SockJS('http://localhost:8082/ws/movement');
             movementStompClientRef.current = Stomp.over(socket);
+
+            const gameRoomSocket = new SockJS('http://localhost:8081/ws/gameRoom');
+            gameRoomStompClientRef.current = Stomp.over(gameRoomSocket);
 
             this.load.image('ship', shipImg);
             this.load.spritesheet('player', playerSprite, {
@@ -78,13 +74,9 @@ const Game = () => {
         function create() {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
-           /* players.sprite = this.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
-            player.sprite.displayHeight = PLAYER_HEIGHT;
-            player.sprite.displayWidth = PLAYER_WIDTH;*/
 
-
-            const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
-            const localPlayer = createPlayerSprite(scene, sessionId, username, localPlayerRole, localPlayerRole);
+            //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
+            const localPlayer = createPlayerSprite(scene, sessionId, username, role);
             players.current.set(sessionId, localPlayer);
 
             TASK_POSITIONS.forEach((pos) => {
@@ -93,7 +85,6 @@ const Game = () => {
                 task.setInteractive();
                 task.on('pointerdown', () => {
                     showTaskPopup(this, task);
-
                 });
             });
 
@@ -121,20 +112,12 @@ const Game = () => {
             });
 
             movementStompClientRef.current.connect({}, () => {
-
-
                 movementStompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
                     const playerPosition = JSON.parse(message.body);
-                    console.log('This is the player position from the server: ' + playerPosition);
-                    console.log('This is the session ID from the server: ' + playerPosition.sessionId);
-                    console.log('This is the session ID from the client: ' + sessionId);
-                    console.log('Position of local player: ' + players.current.sprite.x + ' ' + players.current.sprite.y);
-                    console.log('All players: ' + players.current.size);
+                    console.log('Received player position from server:', playerPosition);
 
-                if (playerPosition.sessionId) {
-                    const playerRole = roles.find(p => p.playerId === playerPosition.playerId)?.role;
-                    if (players.current.has(playerPosition.sessionId)) {
-                        let playerData = players.current.get(playerPosition.sessionId);
+                    const playerData = players.current.get(playerPosition.sessionId);
+                    if (playerData) {
                         let playerSprite = playerData.sprite;
                         if (playerPosition.newPositionX < playerSprite.x) {
                             playerSprite.setFlipX(true);
@@ -145,19 +128,20 @@ const Game = () => {
                         playerSprite.y = playerPosition.newPositionY;
                         playerSprite.moving = true;
                     } else {
-                        const newPlayer = createPlayerSprite(scene, playerPosition.sessionId, playerPosition.username, playerRole, localPlayerRole);
+                        const playerRole = roles.find(p => p.playerId === playerPosition.playerId)?.role;
+                        const newPlayer = createPlayerSprite(scene, playerPosition.sessionId, playerPosition.username, playerRole);
                         players.current.set(playerPosition.sessionId, newPlayer);
                     }
-                }
                 });
 
-                movementStompClientRef.current.subscribe(`/topic/join/${roomId}`, (message) => {
+                gameRoomStompClientRef.current.subscribe(`/topic/join/${roomId}`, (message) => {
                     const playerData = JSON.parse(message.body);
                     if (!players.current.has(playerData.sessionId)) {
-                        const newPlayer = createPlayerSprite(scene, playerData.sessionId, playerData.username, playerData.role, localPlayerRole);
+                        const newPlayer = createPlayerSprite(scene, playerData.sessionId, playerData.username, playerData.role);
                         players.current.set(playerData.sessionId, newPlayer);
                     }
                 });
+
                 movementStompClientRef.current.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
                     const endMove = JSON.parse(message.body);
                     const playerData = players.current.get(endMove.sessionId);
@@ -165,75 +149,62 @@ const Game = () => {
                         playerData.sprite.moving = false;
                     }
                 });
+
                 movementStompClientRef.current.subscribe('/topic/leave', (message) => {
                     const disconnectedPlayer = JSON.parse(message.body);
                     removePlayerSprite(disconnectedPlayer.sessionId);
                 });
             });
 
-                if (isConnected) {
-                    console.log('Emergency is being called');
-                    emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
-                        navigate('/chat');
-                    });
-                }
-
-            function createPlayerSprite(scene, sessionId, playerRole) {
-                let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
-                newPlayerSprite.displayHeight = PLAYER_HEIGHT;
-                newPlayerSprite.displayWidth = PLAYER_WIDTH;
-                newPlayerSprite.moving = false;
-                newPlayerSprite.role = playerRole;
-                players.current.set(sessionId, newPlayerSprite);
-
-
-                movementStompClientRef.current.send('/app/join', JSON.stringify({
-                    token: jwtToken,
-                    sessionId: sessionId,
-                    username: username,
-                    roomId: roomId
-                }), {});
-
-                return newPlayerSprite;
+            if (isConnected) {
+                console.log('Emergency is being called');
+                emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
+                    navigate('/chat');
+                });
             }
         }
 
         function update() {
-            this.scene.scene.cameras.main.centerOn(players.current.get(sessionId).sprite.x, players.current.get(sessionId).sprite.y);
+            const localPlayerData = players.current.get(sessionId);
+            if (localPlayerData && localPlayerData.sprite) {
+                this.scene.scene.cameras.main.centerOn(localPlayerData.sprite.x, localPlayerData.sprite.y);
 
-            players.current.forEach((playerData) => {
-                if (playerData.sprite && playerData.text) {
-                    const { x, y } = playerData.sprite;
-                    if (playerData.text.x !== x || playerData.text.y !== y - 50) {
-                        playerData.text.setPosition(x, y - 50);
+                players.current.forEach((playerData) => {
+                    if (playerData.sprite && playerData.text) {
+                        const { x, y } = playerData.sprite;
+                        if (playerData.text.x !== x || playerData.text.y !== y - 50) {
+                            playerData.text.setPosition(x, y - 50);
+                        }
+                    }
+                });
+
+                const playerMoved = movePlayer(pressedKeys.current, localPlayerData.sprite);
+                if (playerMoved) {
+                    localPlayerData.movedLastFrame = true;
+                } else {
+                    if (localPlayerData.movedLastFrame) {
+                        if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                            movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
+                                token: jwtToken,
+                                sessionId: sessionId,
+                                roomId: roomId
+                            }), {});
+                        }
+                        localPlayerData.movedLastFrame = false;
                     }
                 }
-            });
 
-            const playerMoved = movePlayer(pressedKeys.current, players.current.get(sessionId).sprite);
-            if (playerMoved) {
-                players.current.get(sessionId).movedLastFrame = true;
+                animateMovement(pressedKeys.current, localPlayerData.sprite);
+                players.current.forEach((playerData) => {
+                    if (playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
+                        playerData.sprite.play('running');
+                    } else if (!playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
+                        playerData.sprite.stop('running');
+                    }
+                });
             } else {
-                if (players.current.get(sessionId).movedLastFrame) {
-                    if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                        movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
-                            token: jwtToken,
-                            sessionId: sessionId,
-                            roomId: roomId
-                        }), {});
-                    }
-                    players.current.get(sessionId).movedLastFrame = false;
-                }
+                console.warn('Local player data or sprite is undefined');
             }
-
-            animateMovement(pressedKeys.current, players.current.get(sessionId).sprite);
-            players.current.forEach((playerData) => {
-                if (playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
-                    playerData.sprite.play('running');
-                } else if (!playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
-                    playerData.sprite.stop('running');
-                }
-            });
         }
 
         function movePlayer(pressedKeys, sprite) {
@@ -257,16 +228,21 @@ const Game = () => {
         }
 
         function sendMove(direction, flip) {
-            if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                movementStompClientRef.current.send('/app/move', JSON.stringify({
-                    playerId: playerId,
-                    direction: direction,
-                    positionX: players.current.sprite.x,
-                    positionY: players.current.sprite.y,
-                    flip: flip,
-                    roomId: roomId,
-                    sessionId: sessionId
-                }), {});
+            const localPlayerData = players.current.get(sessionId);
+            if (localPlayerData && localPlayerData.sprite) {
+                if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                    movementStompClientRef.current.send('/app/move', JSON.stringify({
+                        playerId: playerId,
+                        direction: direction,
+                        positionX: localPlayerData.sprite.x,
+                        positionY: localPlayerData.sprite.y,
+                        flip: flip,
+                        roomId: roomId,
+                        sessionId: sessionId
+                    }), {});
+                }
+            } else {
+                console.warn('Local player data or sprite is undefined during move');
             }
         }
 
@@ -279,8 +255,8 @@ const Game = () => {
             }
         }
 
-        function createPlayerSprite(scene, sessionId, username, role, localPlayerRole) {
-            console.log('Creating player sprite with username:', username, 'and role:', role)
+        function createPlayerSprite(scene, sessionId, username, role) {
+            console.log('Creating player sprite with username:', username, 'and role:', role);
             let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
             newPlayerSprite.displayHeight = PLAYER_HEIGHT;
             newPlayerSprite.displayWidth = PLAYER_WIDTH;
@@ -288,9 +264,9 @@ const Game = () => {
 
             // Determine text color based on role
             let textColor = '#ffffff'; // Default to white
-            if (localPlayerRole === 'IMPOSTER') {
+            if (role === 'IMPOSTER') {
                 textColor = role === 'IMPOSTER' ? '#ff0000' : '#ffffff'; // Imposter sees other imposters in red
-            } else if (localPlayerRole === 'CREWMATE') {
+            } else if (role === 'CREWMATE') {
                 textColor = '#ffffff'; // Crewmates see everyone in white
             }
 
@@ -306,7 +282,6 @@ const Game = () => {
                     offsetY: 2, // Set the vertical offset of the shadow
                     color: '#000000', // Set the color of the shadow
                     blur: 4, // Set the blur level of the shadow
-
                 }
             }).setOrigin(0.5, 0.5).setDepth(1);
 
@@ -347,7 +322,7 @@ const Game = () => {
                 popup.destroy();
                 text.destroy();
                 closeButton.destroy();
-                   finishButton.destroy();
+                finishButton.destroy();
             });
         }
 
@@ -366,13 +341,11 @@ const Game = () => {
             }
             game.destroy(true);
         };
-    }, [jwtToken, player, playerId, roles, roomId, sessionId, username, navigate]);
+    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
 
-
-    return(
+    return (
         <div id="game-container">
-
-            <canvas/>
+            <canvas />
         </div>
     );
 }
