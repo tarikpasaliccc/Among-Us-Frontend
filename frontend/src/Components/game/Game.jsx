@@ -33,19 +33,12 @@ const Game = () => {
 
     const navigate = useNavigate();
     const movementStompClientRef = useRef(null)
-/*
-    const emergencyStompClientRef = useRef(null)
-*/
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
 
 
 
 
     useEffect(() => {
-        fetchRoles().then(r => console.log('Roles fetched'));
-
-
-
 
         const config = {
             type: Phaser.WEBGL,
@@ -67,9 +60,6 @@ const Game = () => {
             const socket = new SockJS('http://localhost:8082/ws/movement');
             movementStompClientRef.current = Stomp.over(socket);
 
-            // const emergencySocket = new SockJS('http://localhost:8083/ws/chat');
-            // emergencyStompClientRef.current = Stomp.over(emergencySocket);
-
             this.load.image('ship', shipImg);
             this.load.spritesheet('player', playerSprite, {
                 frameWidth: PLAYER_SPRITE_WIDTH,
@@ -88,11 +78,9 @@ const Game = () => {
         function create() {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
-            player.sprite = this.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
+           /* players.sprite = this.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
             player.sprite.displayHeight = PLAYER_HEIGHT;
-            player.sprite.displayWidth = PLAYER_WIDTH;
-            // Set the role of the player to the role assigned by the server
-            player.role = roles.find(p => p.id.toString() === playerId)?.role;
+            player.sprite.displayWidth = PLAYER_WIDTH;*/
 
 
             const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
@@ -140,7 +128,7 @@ const Game = () => {
                     console.log('This is the player position from the server: ' + playerPosition);
                     console.log('This is the session ID from the server: ' + playerPosition.sessionId);
                     console.log('This is the session ID from the client: ' + sessionId);
-                    console.log('Position of local player: ' + player.sprite.x + ' ' + player.sprite.y);
+                    console.log('Position of local player: ' + players.current.sprite.x + ' ' + players.current.sprite.y);
                     console.log('All players: ' + players.current.size);
 
                 if (playerPosition.sessionId) {
@@ -205,7 +193,9 @@ const Game = () => {
                     username: username,
                     roomId: roomId
                 }), {});
-            });
+
+                return newPlayerSprite;
+            }
         }
 
         function update() {
@@ -225,8 +215,8 @@ const Game = () => {
                 players.current.get(sessionId).movedLastFrame = true;
             } else {
                 if (players.current.get(sessionId).movedLastFrame) {
-                    if (stompClientRef.current && stompClientRef.current.connected) {
-                        stompClientRef.current.send('/app/moveEnd', JSON.stringify({
+                    if (movementStompClientRef.current && movementStompClientRef.current.connected) {
+                        movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
                             token: jwtToken,
                             sessionId: sessionId,
                             roomId: roomId
@@ -271,8 +261,8 @@ const Game = () => {
                 movementStompClientRef.current.send('/app/move', JSON.stringify({
                     playerId: playerId,
                     direction: direction,
-                    positionX: player.sprite.x,
-                    positionY: player.sprite.y,
+                    positionX: players.current.sprite.x,
+                    positionY: players.current.sprite.y,
                     flip: flip,
                     roomId: roomId,
                     sessionId: sessionId
