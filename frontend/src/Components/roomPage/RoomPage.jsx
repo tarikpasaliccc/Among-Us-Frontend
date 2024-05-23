@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, {useCallback, useEffect, useState} from 'react';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import axios from "axios";
 import './roomPage.css';
 import crewImage from './crew.png';
@@ -7,7 +7,7 @@ import reloadImage from './reload-btn.png';
 import exitImage from './exit-btn.png';
 
 function RoomPage() {
-    const { roomId } = useParams();
+    const {roomId} = useParams();
     const [players, setPlayers] = useState([]);
     const navigate = useNavigate();
     const token = sessionStorage.getItem('jwtToken');
@@ -16,6 +16,7 @@ function RoomPage() {
     const location = useLocation();
     const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
+
 
     const fetchRoomData = useCallback(async () => {
         try {
@@ -30,12 +31,13 @@ function RoomPage() {
     }, [roomId]);
 
     useEffect(() => {
-        fetchRoomData();
+        fetchRoomData().then(r =>   console.log('Fetched room data'));
     }, [fetchRoomData]);
 
-    const refreshPlayers = () => {
-        fetchRoomData();
+    const refreshPlayers = () =>{
+        fetchRoomData().then(r => console.log('Refreshed players'));
     }
+
 
     function handleLeaveRoom() {
         async function leaveRoom() {
@@ -50,13 +52,25 @@ function RoomPage() {
             }
         }
         leaveRoom().then(r => console.log('Left room successfully'));
-        navigate('/rooms', { state: { username: username } });
+        navigate('/rooms');
     }
 
-    function handleStartGame() {
+    const handleStartGame = async () => {
         sessionStorage.setItem('roomId', roomId);
-        navigate('/loadingScreen');
+        console.log('Starting game for room:', roomId);
+
+        try {
+            const response = await axios.post(`http://localhost:8081/api/gameRooms/assignRoles/${roomId}`);
+            console.log('Roles were assigned:', response.data);
+            sessionStorage.setItem('role', response.data.role);
+            navigate('/loadingScreen');
+        } catch (error) {
+            console.error('Error starting game:', error);
+        }
     }
+
+
+
 
     const isHost = hostSessionsId === sessionId;
     const isStartGameEnabled = isHost && players.length >= 4;

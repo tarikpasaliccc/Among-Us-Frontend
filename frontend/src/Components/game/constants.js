@@ -1,3 +1,5 @@
+import React from "react";
+
 export const PLAYER_SPRITE_WIDTH = 84;
 export const PLAYER_SPRITE_HEIGHT = 128;
 export const PLAYER_HEIGHT = 50;
@@ -26,5 +28,8 @@ export const TASK_POSITIONS = [
 export const EMERGENCY_TASK_POSITIONS = [
     {x: 346, y: -28}
 ];
+
+
+
 
 

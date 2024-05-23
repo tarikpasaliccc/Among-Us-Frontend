@@ -23,7 +23,7 @@ function LoadingScreen() {
         stompClientRef.current.connect({}, () => {
             stompClientRef.current.subscribe(`/topic/startGame/${roomId}`, (message) => {
                 const gameInfo = JSON.parse(message.body);
-                if (gameInfo.roomId === roomId && gameInfo.started){
+                if (gameInfo.roomId === roomId && gameInfo.started) {
                     console.log('Game started');
                 }
             });
