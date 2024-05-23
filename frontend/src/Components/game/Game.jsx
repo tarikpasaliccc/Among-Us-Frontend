@@ -39,43 +39,9 @@ const Game = () => {
     const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
     const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
-    // Function to handle elimination
-    async function updateElimination(player, action, targetPlayer) {
-        try {
-            const response = await axios.post('http://localhost:8080/api/player/action', {
-                player: player,
-                action: action,
-                targetPlayer: targetPlayer
-            });
-            console.log('Action performed successfully:', response.data);
-        } catch (error) {
-            console.error('Error performing action:', error);
-        }
-    }
 
-    // Example function to handle elimination button click
-    const handleEliminationClick = () => {
-        const action = 'eliminate'; // Define the action type
-        const targetPlayer = {id: 'targetPlayerId'}; // Define the target player
-        updateElimination(player.current, action, targetPlayer).then(r => console.log('Player eliminated'));
-    };
 
     useEffect(() => {
-
-
-        if (movementStompClientRef.current) {
-            movementStompClientRef.current.subscribe(`/topic/nearPlayer/${roomId}`, (message) => {
-                const nearPlayer = JSON.parse(message.body);
-                console.log('Near player:', nearPlayer);
-                setIsKillBtnEnabled(nearPlayer);
-                const killButton = document.getElementById('elimination-button');
-                if (nearPlayer) {
-                    killButton.style.display = 'block';
-                } else {
-                    killButton.style.display = 'none';
-                }
-            });
-        }
 
         const config = {
             type: Phaser.WEBGL,
@@ -389,6 +355,10 @@ const Game = () => {
             }
         }
 
+
+
+
+
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
                 movementStompClientRef.current.disconnect();
@@ -396,6 +366,27 @@ const Game = () => {
             game.destroy(true);
         };
     }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
+
+    // Example function to handle elimination button click
+    const handleEliminationClick = () => {
+        const action = 'eliminate'; // Define the action type
+        const targetPlayer = {id: 'targetPlayerId'}; // Define the target player
+        updateElimination(players.current, action, targetPlayer).then(r => console.log('Player eliminated'));
+    };
+
+    // Function to handle elimination
+    async function updateElimination(player, action, targetPlayer) {
+        try {
+            const response = await axios.post('http://localhost:8084/api/player/action', {
+                player: player,
+                action: action,
+                targetPlayer: targetPlayer
+            });
+            console.log('Action performed successfully:', response.data);
+        } catch (error) {
+            console.error('Error performing action:', error);
+        }
+    }
 
     return(
         <div id="game-container">
@@ -406,7 +397,7 @@ const Game = () => {
                 onClick={isKillBtnEnabled ? handleEliminationClick : null}
                 style={{display: isKillBtnEnabled ? 'block' : 'none'}}
             />
-            <canvas />
+            <canvas/>
         </div>
     );
 }
