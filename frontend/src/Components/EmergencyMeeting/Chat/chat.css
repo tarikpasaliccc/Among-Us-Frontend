@@ -1,0 +1,118 @@
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 90%;
+    height: 70vh;
+    padding: 20px;
+    background-color: white;
+    color: black;
+    border-radius: 5px;
+}
+
+.chat-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: white;
+    border-radius: 5px;
+    width: 100%;
+}
+
+.chat-input {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    position: relative;
+}
+
+.chat-message {
+    margin: 5px 0;
+}
+
+.text-message {
+    padding: 5px;
+    border-radius: 5px;
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.own-message {
+    text-align: right;
+    background-color: floralwhite;
+    color: black;
+    border-radius: 5px;
+    margin-left: 20%;
+}
+
+.other-player-message {
+    text-align: left;
+    background-color: floralwhite;
+    color: black;
+    border-radius: 5px;
+    margin-right: 20%;
+}
+
+.chat-input-field {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 25px; /* Full rounded corners */
+    background-color: white;
+    color: black;
+    padding-right: 90px; /* Space for the button inside the input */
+    box-sizing: border-box;
+}
+
+.chat-button {
+    position: absolute;
+    right: 10px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 25px;
+    color: white;
+    background-color: #007BFF;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    height: calc(100% - 15px); /* Adjust based on input padding */
+}
+
+.chat-button:hover {
+    background-color: #0056b3;
+}
+
+.chat-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.chat-popup-box {
+    position: relative;
+    width: 700px;
+    max-width: 90%;
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #333;
+}

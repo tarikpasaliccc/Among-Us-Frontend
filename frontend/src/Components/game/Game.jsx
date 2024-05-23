@@ -17,13 +17,11 @@ import {
     TASK_POSITIONS,
     EMERGENCY_TASK_POSITIONS
 } from "./constants";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {useWebSocket} from "../../Context/WebSocketContext";
-
+import { useWebSocket } from "../../Context/WebSocketContext";
 
 const Game = () => {
-
     const jwtToken = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
@@ -42,7 +40,6 @@ const Game = () => {
 
 
     useEffect(() => {
-
         const config = {
             type: Phaser.WEBGL,
             width: window.innerWidth,
