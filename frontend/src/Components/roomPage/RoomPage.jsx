@@ -86,7 +86,7 @@ function RoomPage() {
                 <button
                     className="start-game-btn"
                     onClick={handleStartGame}
-                    disabled={!isStartGameEnabled}
+                    // disabled={!isStartGameEnabled}
                 >
                     Start
                 </button>
