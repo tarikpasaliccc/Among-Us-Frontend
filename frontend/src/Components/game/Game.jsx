@@ -31,12 +31,12 @@ const Game = () => {
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
-    const [killBtnDisabled, setKillBtnDisabled] = useState(false);
+    const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
     const navigate = useNavigate();
     const movementStompClientRef = useRef(null)
     const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
-    const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
+
 
 
     useEffect(() => {
@@ -74,11 +74,17 @@ const Game = () => {
 
             this.load.image('task', taskImg);
             this.load.image('emergencyButton', taskImg);
+            this.load.image('killBtnEnabled', killBtnEnabledImg);
+            this.load.image('killBtnDisabled', killBtnDisabledImg);
         }
 
         function create() {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
+            this.killBtn = this.add.image(1200, 600, 'killBtnEnabled');
+            this.killBtn.setInteractive();
+            this.killBtn.setScale(0.03);
+            this.killBtn.setScrollFactor(0);
 
             //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
             const localPlayer = createPlayerSprite(scene, sessionId, username, role);
@@ -385,16 +391,16 @@ const Game = () => {
         }
     }
 
-    return(
-        <div id="game-container">
+    return (
+        <div id="game-container" style={{ position: 'relative' }}>
             <img
                 id="elimination-button"
                 src={isKillBtnEnabled ? killBtnEnabledImg : killBtnDisabledImg}
                 alt="Eliminate"
-                onClick={isKillBtnEnabled ? handleEliminationClick : null}
-                style={{display: isKillBtnEnabled ? 'block' : 'none'}}
+                onClick={isKillBtnEnabled ? handleEliminationClick : undefined}
+                style={{ display: isKillBtnEnabled ? 'block' : 'none', width: '50px', height: '50px' }}
             />
-            <canvas/>
+            <canvas />
         </div>
     );
 }
