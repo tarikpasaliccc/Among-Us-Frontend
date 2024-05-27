@@ -5,6 +5,8 @@ import playerSprite from "./assets/player.png";
 import SockJS from 'sockjs-client';
 import Stomp from 'webstomp-client';
 import taskImg from "./assets/task.png";
+import killBtnEnabledImg from "./assets/kill-btn-enabled.png";
+import killBtnDisabledImg from "./assets/kill-btn-disabled.png";
 import {
     PLAYER_SPRITE_HEIGHT,
     PLAYER_SPRITE_WIDTH,
@@ -15,9 +17,9 @@ import {
     TASK_POSITIONS,
     EMERGENCY_TASK_POSITIONS
 } from "./constants";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import {useWebSocket} from "../../Context/WebSocketContext";
+import { useWebSocket } from "../../Context/WebSocketContext";
 
 const Game = () => {
     const jwtToken = sessionStorage.getItem('jwtToken');
@@ -29,10 +31,13 @@ const Game = () => {
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
+    const [killBtnDisabled, setKillBtnDisabled] = useState(false);
     const navigate = useNavigate();
     const movementStompClientRef = useRef(null)
     const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
+    const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
+
 
     useEffect(() => {
         const config = {
@@ -78,6 +83,18 @@ const Game = () => {
             //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
             const localPlayer = createPlayerSprite(scene, sessionId, username, role);
             players.current.set(sessionId, localPlayer);
+
+            const emergencyButtonPos = EMERGENCY_TASK_POSITIONS[0]; // Assuming there's at least one position
+            const emergencyButton = this.add.image(emergencyButtonPos.x, emergencyButtonPos.y, 'emergencyButton');
+            emergencyButton.setScale(0.03);
+            emergencyButton.setInteractive();
+            emergencyButton.on('pointerdown', () => {
+                if (isConnected) {
+                    console.log('Emergency button clicked');
+                    emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {
+                    });
+                }
+            });
 
             TASK_POSITIONS.forEach((pos) => {
                 const task = this.add.image(pos.x, pos.y, 'task');
@@ -347,6 +364,10 @@ const Game = () => {
             }
         }
 
+
+
+
+
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
                 movementStompClientRef.current.disconnect();
@@ -355,9 +376,37 @@ const Game = () => {
         };
     }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
 
-    return (
+    // Example function to handle elimination button click
+    const handleEliminationClick = () => {
+        const action = 'eliminate'; // Define the action type
+        const targetPlayer = {id: 'targetPlayerId'}; // Define the target player
+        updateElimination(players.current, action, targetPlayer).then(r => console.log('Player eliminated'));
+    };
+
+    // Function to handle elimination
+    async function updateElimination(player, action, targetPlayer) {
+        try {
+            const response = await axios.post('http://localhost:8084/api/player/action', {
+                player: player,
+                action: action,
+                targetPlayer: targetPlayer
+            });
+            console.log('Action performed successfully:', response.data);
+        } catch (error) {
+            console.error('Error performing action:', error);
+        }
+    }
+
+    return(
         <div id="game-container">
-            <canvas />
+            <img
+                id="elimination-button"
+                src={isKillBtnEnabled ? killBtnEnabledImg : killBtnDisabledImg}
+                alt="Eliminate"
+                onClick={isKillBtnEnabled ? handleEliminationClick : null}
+                style={{display: isKillBtnEnabled ? 'block' : 'none'}}
+            />
+            <canvas/>
         </div>
     );
 }
