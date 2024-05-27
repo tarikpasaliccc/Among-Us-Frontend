@@ -58,15 +58,15 @@ function RoomPage() {
     const handleStartGame = async () => {
         sessionStorage.setItem('roomId', roomId);
         console.log('Starting game for room:', roomId);
-
-        try {
+        navigate('/loadingScreen');
+        /*try {
             const response = await axios.post(`http://localhost:8081/api/gameRooms/assignRoles/${roomId}`);
             console.log('Roles were assigned:', response.data);
             sessionStorage.setItem('role', response.data.role);
             navigate('/loadingScreen');
         } catch (error) {
             console.error('Error starting game:', error);
-        }
+        }*/
     }
 
 

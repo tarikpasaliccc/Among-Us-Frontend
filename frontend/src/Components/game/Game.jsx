@@ -88,6 +88,18 @@ const Game = () => {
                 });
             });
 
+            const emergencyButtonPos = EMERGENCY_TASK_POSITIONS[0]; // Assuming there's at least one position
+            const emergencyButton = this.add.image(emergencyButtonPos.x, emergencyButtonPos.y, 'emergencyButton');
+            emergencyButton.setScale(0.03);
+            emergencyButton.setInteractive();
+            emergencyButton.on('pointerdown', () => {
+                if (isConnected) {
+                    console.log('Emergency button clicked');
+                    emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {
+                    });
+                }
+            });
+
             this.anims.create({
                 key: 'running',
                 frames: this.anims.generateFrameNumbers('player'),
@@ -159,7 +171,7 @@ const Game = () => {
             if (isConnected) {
                 console.log('Emergency is being called');
                 emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
-                    navigate('/chat');
+                    navigate('/emergencyMeeting');
                 });
             }
         }
