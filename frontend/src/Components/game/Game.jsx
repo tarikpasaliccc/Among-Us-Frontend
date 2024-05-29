@@ -33,11 +33,15 @@ const Game = () => {
     const pressedKeys = useRef([]);
     const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
     const navigate = useNavigate();
-    const movementStompClientRef = useRef(null)
+    const movementStompClientRef = useRef(null);
     const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
 
-
+    // Set initial state for isKillBtnEnabled
+    useEffect(() => {
+        console.log('Role:', role); // Debugging role value
+        setIsKillBtnEnabled(role === 'IMPOSTER');
+    }, [role]);
 
     useEffect(() => {
         const config = {
@@ -46,9 +50,9 @@ const Game = () => {
             height: window.innerHeight,
             parent: 'game-container',
             scene: {
-                preload: preload,
-                create: create,
-                update: update
+                preload,
+                create,
+                update
             }
         };
 
@@ -85,8 +89,10 @@ const Game = () => {
             this.killBtn.setInteractive();
             this.killBtn.setScale(0.03);
             this.killBtn.setScrollFactor(0);
+            this.killBtn.setVisible(role === 'IMPOSTER'); // Ensure the kill button visibility is set based on role
 
-            //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
+            console.log('Kill button visible:', this.killBtn.visible); // Debugging visibility
+
             const localPlayer = createPlayerSprite(scene, sessionId, username, role);
             players.current.set(sessionId, localPlayer);
 
@@ -97,8 +103,7 @@ const Game = () => {
             emergencyButton.on('pointerdown', () => {
                 if (isConnected) {
                     console.log('Emergency button clicked');
-                    emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {
-                    });
+                    emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {});
                 }
             });
 
@@ -288,9 +293,7 @@ const Game = () => {
             // Determine text color based on role
             let textColor = '#ffffff'; // Default to white
             if (role === 'IMPOSTER') {
-                textColor = role === 'IMPOSTER' ? '#ff0000' : '#ffffff'; // Imposter sees other imposters in red
-            } else if (role === 'CREWMATE') {
-                textColor = '#ffffff'; // Crewmates see everyone in white
+                textColor = '#ff0000'; // Imposter sees other imposters in red
             }
 
             let newPlayerText = scene.add.text(PLAYER_START_X, PLAYER_START_Y - 50, username, {
@@ -358,10 +361,6 @@ const Game = () => {
             }
         }
 
-
-
-
-
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
                 movementStompClientRef.current.disconnect();
@@ -371,19 +370,46 @@ const Game = () => {
     }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
 
     // Example function to handle elimination button click
-    const handleEliminationClick = () => {
-        const action = 'eliminate'; // Define the action type
-        const targetPlayer = {id: 'targetPlayerId'}; // Define the target player
-        updateElimination(players.current, action, targetPlayer).then(r => console.log('Player eliminated'));
+    const handleEliminationClick = async () => {
+        const localPlayerData = players.current.get(sessionId);
+        if (localPlayerData) {
+            const targetPlayer = await fetchKillablePlayer(localPlayerData.sessionId);
+            if (targetPlayer) {
+                updateElimination(localPlayerData.sessionId, targetPlayer.playerId).then(response => {
+                    if (response.status === 200) {
+                        console.log('Player eliminated successfully');
+                    }
+                }).catch(error => {
+                    console.error('Error performing elimination action:', error);
+                });
+            }
+        }
+    };
+
+    const fetchKillablePlayer = async (playerId) => {
+        try {
+            const response = await axios.get(`http://localhost:8084/api/player/getAllPlayers/${playerId}`);
+            const players = response.data;
+
+            for (const player of players) {
+                if (player.role === 'CREWMATE') {
+                    return player; // Return the first crewmate found
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('Error fetching players:', error);
+            return null;
+        }
     };
 
     // Function to handle elimination
-    async function updateElimination(player, action, targetPlayer) {
+    async function updateElimination(playerId, targetPlayerId) {
         try {
-            const response = await axios.post('http://localhost:8084/api/player/action', {
-                player: player,
-                action: action,
-                targetPlayer: targetPlayer
+            const response = await axios.post('http://localhost:8084/api/player/performAction', {
+                playerId: { playerId: playerId },
+                targetPlayerId: { playerId: targetPlayerId },
+                action: 'KILL'
             });
             console.log('Action performed successfully:', response.data);
         } catch (error) {
@@ -398,7 +424,7 @@ const Game = () => {
                 src={isKillBtnEnabled ? killBtnEnabledImg : killBtnDisabledImg}
                 alt="Eliminate"
                 onClick={isKillBtnEnabled ? handleEliminationClick : undefined}
-                style={{ display: isKillBtnEnabled ? 'block' : 'none', width: '50px', height: '50px' }}
+                style={{ display: role === 'IMPOSTER' ? 'block' : 'none', width: '50px', height: '50px', position: 'absolute', bottom: '10px', right: '10px' }}
             />
             <canvas />
         </div>
