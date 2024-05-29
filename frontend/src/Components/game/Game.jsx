@@ -74,13 +74,21 @@ const Game = () => {
 
             this.load.image('task', taskImg);
             this.load.image('emergencyButton', taskImg);
+            this.load.image('killBtnEnabled', killBtnEnabledImg);
+            this.load.image('killBtnDisabled', killBtnDisabledImg);
         }
 
         function create() {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
+            this.killBtn = this.add.image(1200, 600, 'killBtnEnabled');
+            this.killBtn.setInteractive();
+            this.killBtn.setScale(0.03);
+            this.killBtn.setScrollFactor(0);
+            this.killBtn.setVisible(role === 'IMPOSTER'); // Ensure the kill button visibility is set based on role
 
-            //const localPlayerRole = roles.find(p => p.playerId.toString() === playerId)?.role;
+            console.log('Kill button visible:', this.killBtn.visible); // Debugging visibility
+
             const localPlayer = createPlayerSprite(scene, sessionId, username, role);
             players.current.set(sessionId, localPlayer);
 
@@ -360,10 +368,6 @@ const Game = () => {
                 players.current.delete(sessionId);
             }
         }
-
-
-
-
 
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
