@@ -5,8 +5,8 @@ import Game from "./Components/game/Game";
 import LoadingScreen from "./Components/loadingScreen/loadingScreen";
 import RoomList from "./Components/roomsList/RoomsList";
 import RoomPage from "./Components/roomPage/RoomPage";
-import Chat from "./Components/chat/Chat";
 import {WebSocketProvider} from "./Context/WebSocketContext";
+import EmergencyMeeting from "./Components/EmergencyMeeting/EmergencyMeeting";
 
 function App() {
 
@@ -20,7 +20,7 @@ function App() {
                         <Route path="/loadingScreen" element={<LoadingScreen/>}/>
                         <Route path="/rooms" element={<RoomList/>}/>
                         <Route path="/room/:roomId" element={<RoomPage/>}/>
-                        <Route path="/chat" element={<Chat/>}/>
+                        <Route path="/emergencyMeeting" element={<EmergencyMeeting/>}/>
                     </Routes>
                 </div>
             </Router>

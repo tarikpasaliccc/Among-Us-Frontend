@@ -1,0 +1,109 @@
+.voting-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url("emergencyMeeting.png") no-repeat center center;
+    background-size: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.voting-overlay::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Adjust the opacity for darker/lighter effect */
+    z-index: 1;
+}
+
+.voting-box {
+    position: relative;
+    z-index: 2; /* Ensure the voting box is above the overlay */
+    width: 80%;
+    max-width: 1000px;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    height: 550px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.voting-header {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.chat-voting-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 100px;
+    height: 100px;
+    background-image: url('./chat-button.png'); /* Path to your image */
+    background-size: cover; /* Ensure the image covers the button */
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    outline: none; /* Remove the default outline on focus */
+    border-radius: 50%; /* Make the button circular, adjust as needed */
+    transition: transform 0.2s; /* Smooth hover effect */
+}
+
+.chat-voting-button:hover {
+    transform: scale(1.1); /* Slight zoom on hover */
+}
+
+.voting-container {
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-items: center;
+    margin-top: 60px; /* Ensure there's space for the header and button */
+    padding-bottom: 5px; /* Optional: Adjust this value if there's still extra space */
+}
+
+.player-card {
+    width: 200px;
+    background-color: #444;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 10px; /* Reduced bottom margin */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    height: 50px;
+}
+
+.player-card:hover {
+    background-color: #555;
+}
+
+.player-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+}
+
+.player-name {
+    text-align: center;
+    color: white;
+}
