@@ -100,9 +100,17 @@ const Game = () => {
             emergencyButton.setInteractive();
             emergencyButton.on('pointerdown', () => {
                 if (isConnected) {
+                    //Todo: navigate to emergency meeting page and then to the voting and chat page
                     console.log('Emergency button clicked');
                     emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {
                     });
+                }
+                try {
+                    const response = axios.post(`http://localhost:8083/api/voting/initiateVoting/${roomId}`, () => {
+                        console.log('Voting initiated');
+                    });
+                } catch (error) {
+                    console.error('Error initiating voting:', error);
                 }
             });
 

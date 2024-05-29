@@ -7,6 +7,7 @@ import RoomList from "./Components/roomsList/RoomsList";
 import RoomPage from "./Components/roomPage/RoomPage";
 import {WebSocketProvider} from "./Context/WebSocketContext";
 import EmergencyMeeting from "./Components/EmergencyMeeting/EmergencyMeeting";
+import VotedOutAnimation from "./Components/EmergencyMeeting/VotingSystem/VotedOutAnimation/VotedOutAnimation";
 
 function App() {
 
@@ -21,6 +22,7 @@ function App() {
                         <Route path="/rooms" element={<RoomList/>}/>
                         <Route path="/room/:roomId" element={<RoomPage/>}/>
                         <Route path="/emergencyMeeting" element={<EmergencyMeeting/>}/>
+                        <Route path="/votedOut" element={<VotedOutAnimation/>}/>
                     </Routes>
                 </div>
             </Router>

@@ -35,6 +35,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow-y: auto; /* Allow scrolling if needed */
+    justify-content: space-between; /* Ensure elements are spaced out */
 }
 
 .voting-header {
@@ -69,46 +71,48 @@
 }
 
 .voting-container {
-    flex-grow: 1;
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-around;
-    align-items: center;
-    margin-top: 60px; /* Ensure there's space for the header and button */
-    padding-bottom: 5px; /* Optional: Adjust this value if there's still extra space */
+    justify-content: center; /* Align items to the top */
+    align-items: flex-start;
+    margin-top: 100px; /* Adjust this value if needed */
+    padding-bottom: 5px;
+    width: 100%;
+    flex-grow: 1; /* Allow it to take up available space */
 }
 
-.player-card {
+.voting-player-card {
     width: 200px;
-    background-color: #444;
+    height: 70px;
+    background-color: #333333;
     padding: 10px;
     border-radius: 10px;
-    margin: 10px; /* Reduced bottom margin */
+    margin: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    transition: background-color 0.3s;
-    height: 50px;
+    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
 }
 
-.player-card:hover {
+.voting-player-card:hover {
     background-color: #555;
 }
 
-.player-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    margin-bottom: 10px;
+.voting-player-card.selected {
+    background-color: #555;
+    border: 2px solid red;
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
 }
 
-.player-name {
+.voting-player-name {
     text-align: center;
     color: white;
+    font-size: 30px;
 }
 
-.new-message-indicator{
+.new-message-indicator {
     font-size: 50px;
 }
 
@@ -118,3 +122,75 @@
     color: white;
 }
 
+.player-card.voted {
+    background-color: #555;
+    border: 2px solid #007BFF;
+}
+
+.countdown-timer {
+    font-size: 18px;
+    color: red;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.skip-vote-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: red;
+    color: white;
+    border: none;
+    font-size: 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.vote-dots {
+    display: flex;
+    margin-top: 5px;
+}
+
+.voting-player-icon {
+    height: 25px;
+    width: 25px;
+    margin-right: 3px;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards; /* Apply animation */
+}
+
+.voting-player-icon:nth-child(1) {
+    animation-delay: 0.3s;
+}
+
+.voting-player-icon:nth-child(2) {
+    animation-delay: 0.6s;
+}
+
+.voting-player-icon:nth-child(3) {
+    animation-delay: 0.9s;
+}
+
+.voting-player-icon:nth-child(4) {
+    animation-delay: 1.2s;
+}
+
+.voting-player-icon:nth-child(5) {
+    animation-delay: 1.5s;
+}
