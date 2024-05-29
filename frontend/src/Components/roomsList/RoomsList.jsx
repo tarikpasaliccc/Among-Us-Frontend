@@ -113,8 +113,11 @@ function RoomList() {
 
     return (
         <div className="full-page-wrapper">
+            <video autoPlay loop muted className="video-background">
+                <source src="./list-background.mp4" />
+            </video>
             <div className="main-wrapper">
-                <h1 className="joinRoom">Join a Room</h1>
+                <h1 className="joinRoom">Active Rooms</h1>
                 <img src={reloadImage} alt="Reload" className="refresh-btn2" onClick={refreshRooms}/>
                 {!Array.isArray(rooms) || rooms.length === 0 ? (
                     <p>No active rooms, create one yourself ➘</p>

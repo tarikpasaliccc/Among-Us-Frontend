@@ -6,7 +6,8 @@
     height: 100%;
     background: black;
     background-size: cover;
-    z-index: -1; /* Ensure this is behind all other content */
+    overflow: hidden;
+    z-index: -1;
 }
 
 .main-wrapper {
@@ -31,11 +32,12 @@
 }
 
 .joinRoom {
-    font-weight: bold;
+    text-decoration: underline;
+    font-weight: bold !important;
     text-align: center;
     font-size: 40px !important;
     margin-top: 40px !important;
-    font-family: monospace;
+    font-family: "Helvetica", sans-serif;
 }
 
 p {
@@ -195,4 +197,14 @@ input[type="text"]:hover {
 .refresh-btn2:hover {
     border-color: #D9D9D9;
     box-shadow: 0 0 10px #D9D9D9;
+}
+
+
+.video-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
 }
