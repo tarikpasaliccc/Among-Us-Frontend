@@ -1,3 +1,4 @@
+
 import React, {useCallback, useEffect, useState} from 'react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import axios from "axios";
@@ -62,7 +63,8 @@ function RoomPage() {
         /*try {
             const response = await axios.post(`http://localhost:8081/api/gameRooms/assignRoles/${roomId}`);
             console.log('Roles were assigned:', response.data);
-            sessionStorage.setItem('role', response.data.role);
+            console.log('Storage Role:', response.data.players[0].role);
+            sessionStorage.setItem('role', JSON.stringify(response.data.players));
             navigate('/loadingScreen');
         } catch (error) {
             console.error('Error starting game:', error);
