@@ -150,6 +150,11 @@ const Game = () => {
                     const playerPosition = JSON.parse(message.body);
                     console.log('Received player position from server:', playerPosition);
 
+                    //When in collision range with another player, enable the kill button
+                    if (playerPosition.collision) {
+                        setIsKillBtnEnabled(true);
+                    }
+
                     const playerData = players.current.get(playerPosition.sessionId);
                     if (playerData) {
                         let playerSprite = playerData.sprite;

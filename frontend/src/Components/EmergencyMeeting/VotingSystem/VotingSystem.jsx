@@ -63,7 +63,7 @@ const VotingSystem = () => {
             if (result.status === "skipped") {
                 setVoteResults({});
                 setVotedOut(null);
-                //ToDO: Display a message to all players that the vote was skipped
+                //ToDO: Display a message to all players that the vote was skipped with animation
                 alert("Voting was skipped, no player was ejected.");
             } else {
                 setVoteResults(result.voteCount);
@@ -80,7 +80,8 @@ const VotingSystem = () => {
                 }
 
                 alert("Player " + result.mostVotedPlayerUsername + " was ejected.");
-                //navigate('/votedOut', {state: {player: result.mostVotedPlayer}});
+                //ToDO: Display a message to all players that the player was ejected with animation
+                //ToDO: Check if the player is an impostor or not and display the result to all players
             }
         } catch (error) {
             console.error('Error concluding vote:', error);
