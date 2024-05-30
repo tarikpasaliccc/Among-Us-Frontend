@@ -32,12 +32,12 @@ const Game = () => {
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
     const [killBtnDisabled, setKillBtnDisabled] = useState(false);
+    const targetPlayerIdRef = useRef(null);
     const navigate = useNavigate();
-    const movementStompClientRef = useRef(null)
+    const movementStompClientRef = useRef(null);
     const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
     const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
-
 
     useEffect(() => {
         const config = {
@@ -76,22 +76,63 @@ const Game = () => {
             this.load.image('emergencyButton', taskImg);
             this.load.image('killBtnEnabled', killBtnEnabledImg);
             this.load.image('killBtnDisabled', killBtnDisabledImg);
+
+            // // Load ghost sprites
+            // for (let i = 1; i <= 48; i++) {
+            //     const imagePath = `assets/Ghost/ghostbob${String(i).padStart(4, '0')}.png`;
+            //     console.log(`Loading image: ${imagePath}`); // Debugging step
+            //     this.load.image(`ghost${i}`, imagePath);
+            // }
         }
 
         function create() {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
-            this.killBtn = this.add.image(1200, 600, 'killBtnEnabled');
+            this.killBtn = this.add.image(1450, 680, 'killBtnDisabled');
             this.killBtn.setInteractive();
-            this.killBtn.setScale(0.03);
+            this.killBtn.setScale(0.045);
             this.killBtn.setScrollFactor(0);
-            this.killBtn.setVisible(role === 'IMPOSTER'); // Ensure the kill button visibility is set based on role
 
-            console.log('Kill button visible:', this.killBtn.visible); // Debugging visibility
+            const updateKillButtonState = (isEnabled) => {
+                if (isEnabled) {
+                    this.killBtn.setTexture('killBtnEnabled');
+                    this.killBtn.setInteractive();
+                    this.killBtn.setScale(0.035);
+                } else {
+                    this.killBtn.setTexture('killBtnDisabled');
+                    this.killBtn.disableInteractive();
+                    this.killBtn.setScale(0.05);
+                }
+            };
+            // Initialize button state
+            updateKillButtonState(false);
+
+            this.killBtn.on('pointerdown', () => {
+                if (this.killBtn.input.enabled) {
+                        console.log('Kill button clicked');
+
+                        if (targetPlayerIdRef.current) {
+                            try {
+                                const response = axios.post('http://localhost:8081/api/gameRooms/eliminatePlayer', {
+                                    gameRoomId: roomId,
+                                    votedPlayerId: targetPlayerIdRef.current
+                                });
+                                console.log('Player set to dead: ', response.data);
+                                const playerData = players.current.get(targetPlayerIdRef.current);
+                                if (playerData && playerData.sprite) {
+                                    turnPlayerToGhost(scene, playerData.sprite);
+                                }
+                            } catch (error) {
+                                console.error('Error setting player to dead:', error);
+                            }
+                        } else {
+                            console.warn('No target player selected for elimination');
+                        }
+                    }
+            });
 
             const localPlayer = createPlayerSprite(scene, sessionId, username, role);
             players.current.set(sessionId, localPlayer);
-
 
             TASK_POSITIONS.forEach((pos) => {
                 const task = this.add.image(pos.x, pos.y, 'task');
@@ -129,6 +170,18 @@ const Game = () => {
                 repeat: -1
             });
 
+            // const ghostFrames = [];
+            // for (let i = 1; i <= 48; i++) {
+            //     ghostFrames.push({ key: `ghost${i}` });
+            // }
+            //
+            // this.anims.create({
+            //     key: 'ghostAnim',
+            //     frames: ghostFrames,
+            //     frameRate: 10,
+            //     repeat: -1
+            // });
+
             this.input.keyboard.on('keydown', (event) => {
                 if (!pressedKeys.current.includes(event.code)) {
                     pressedKeys.current.push(event.code);
@@ -150,13 +203,26 @@ const Game = () => {
                     const playerPosition = JSON.parse(message.body);
                     console.log('Received player position from server:', playerPosition);
 
-                    //When in collision range with another player, enable the kill button
-                    if (playerPosition.collision) {
+                    if (!playerPosition || !playerPosition.sessionId) {
+                        console.log('Invalid player position received:', playerPosition);
+                        return;
+                    }
+
+                    if (playerPosition.wouldCollide) {
                         setIsKillBtnEnabled(true);
+                        updateKillButtonState.call(this, true);
+                        targetPlayerIdRef.current = playerPosition.targetPlayerId;
+                        console.log('Would collide with player:', playerPosition.targetPlayerId);
+                        console.log('Target player id:', targetPlayerIdRef.current);
+                    } else {
+                        setIsKillBtnEnabled(false);
+                        updateKillButtonState.call(this, false);
+                        targetPlayerIdRef.current = null;
+                        console.log('Would not collide with any player');
                     }
 
                     const playerData = players.current.get(playerPosition.sessionId);
-                    if (playerData) {
+                    if (playerData && playerData.sprite) {
                         let playerSprite = playerData.sprite;
                         if (playerPosition.newPositionX < playerSprite.x) {
                             playerSprite.setFlipX(true);
@@ -166,12 +232,13 @@ const Game = () => {
                         playerSprite.x = playerPosition.newPositionX;
                         playerSprite.y = playerPosition.newPositionY;
                         playerSprite.moving = true;
-                    } else {
+                    } else if (playerPosition.sessionId) {
                         const playerRole = roles.find(p => p.playerId === playerPosition.playerId)?.role;
                         const newPlayer = createPlayerSprite(scene, playerPosition.sessionId, playerPosition.username, playerRole);
                         players.current.set(playerPosition.sessionId, newPlayer);
                     }
                 });
+
 
                 gameRoomStompClientRef.current.subscribe(`/topic/join/${roomId}`, (message) => {
                     const playerData = JSON.parse(message.body);
@@ -184,7 +251,7 @@ const Game = () => {
                 movementStompClientRef.current.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
                     const endMove = JSON.parse(message.body);
                     const playerData = players.current.get(endMove.sessionId);
-                    if (playerData) {
+                    if (playerData && playerData.sprite) {
                         playerData.sprite.moving = false;
                     }
                 });
@@ -209,7 +276,7 @@ const Game = () => {
                 this.scene.scene.cameras.main.centerOn(localPlayerData.sprite.x, localPlayerData.sprite.y);
 
                 players.current.forEach((playerData) => {
-                    if (playerData.sprite && playerData.text) {
+                    if (playerData && playerData.sprite && playerData.text) {
                         const { x, y } = playerData.sprite;
                         if (playerData.text.x !== x || playerData.text.y !== y - 50) {
                             playerData.text.setPosition(x, y - 50);
@@ -235,9 +302,9 @@ const Game = () => {
 
                 animateMovement(pressedKeys.current, localPlayerData.sprite);
                 players.current.forEach((playerData) => {
-                    if (playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
+                    if (playerData.sprite && playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
                         playerData.sprite.play('running');
-                    } else if (!playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
+                    } else if (playerData.sprite && !playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
                         playerData.sprite.stop('running');
                     }
                 });
@@ -295,6 +362,7 @@ const Game = () => {
         }
 
         function createPlayerSprite(scene, sessionId, username, role) {
+
             console.log('Creating player sprite with username:', username, 'and role:', role);
             let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
             newPlayerSprite.displayHeight = PLAYER_HEIGHT;
@@ -374,6 +442,12 @@ const Game = () => {
             }
         }
 
+        function turnPlayerToGhost(scene, playerSprite) {
+            playerSprite.setTexture('ghost1'); // Set the initial texture
+            playerSprite.play('ghostAnim'); // Play the ghost animation
+        }
+
+
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
                 movementStompClientRef.current.disconnect();
@@ -382,39 +456,12 @@ const Game = () => {
         };
     }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
 
-    // Example function to handle elimination button click
-    const handleEliminationClick = () => {
-        const action = 'eliminate'; // Define the action type
-        const targetPlayer = {id: 'targetPlayerId'}; // Define the target player
-        updateElimination(players.current, action, targetPlayer).then(r => console.log('Player eliminated'));
-    };
 
-    // Function to handle elimination
-    async function updateElimination(player, action, targetPlayer) {
-        try {
-            const response = await axios.post('http://localhost:8084/api/player/action', {
-                player: player,
-                action: action,
-                targetPlayer: targetPlayer
-            });
-            console.log('Action performed successfully:', response.data);
-        } catch (error) {
-            console.error('Error performing action:', error);
-        }
-    }
-
-    return(
+    return (
         <div id="game-container">
-            <img
-                id="elimination-button"
-                src={isKillBtnEnabled ? killBtnEnabledImg : killBtnDisabledImg}
-                alt="Eliminate"
-                onClick={isKillBtnEnabled ? handleEliminationClick : null}
-                style={{display: isKillBtnEnabled ? 'block' : 'none'}}
-            />
-            <canvas/>
+            <canvas />
         </div>
     );
-}
+};
 
 export default Game;

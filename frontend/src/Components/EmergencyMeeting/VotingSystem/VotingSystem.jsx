@@ -70,7 +70,7 @@ const VotingSystem = () => {
                 setVotedOut(result.mostVotedPlayerId);
                 // Send the result to the backend to set the player to dead
                 try {
-                    const response = await axios.post('http://localhost:8081/api/gameRooms/voteResult', {
+                    const response = await axios.post('http://localhost:8081/api/gameRooms/eliminatePlayer', {
                         gameRoomId: roomId,
                         votedPlayerId: result.mostVotedPlayerId
                     })
