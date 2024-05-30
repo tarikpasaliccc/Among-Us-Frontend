@@ -77,52 +77,52 @@ const Game = () => {
             this.load.image('killBtnEnabled', killBtnEnabledImg);
             this.load.image('killBtnDisabled', killBtnDisabledImg);
 
-            // // Load ghost sprites
-            // for (let i = 1; i <= 48; i++) {
-            //     const imagePath = `assets/Ghost/ghostbob${String(i).padStart(4, '0')}.png`;
-            //     console.log(`Loading image: ${imagePath}`); // Debugging step
-            //     this.load.image(`ghost${i}`, imagePath);
-            // }
+            /*// Load ghost sprites
+            for (let i = 1; i <= 48; i++) {
+                this.load.image(`ghost${i}`, `assets/Ghost/ghostbob${String(i).padStart(4, '0')}.png`);
+            }*/
         }
 
         function create() {
             const scene = this;
             this.ship = this.add.image(0, 0, 'ship');
-            this.killBtn = this.add.image(1450, 680, 'killBtnDisabled');
-            this.killBtn.setInteractive();
-            this.killBtn.setScale(0.045);
-            this.killBtn.setScrollFactor(0);
-
-            const updateKillButtonState = (isEnabled) => {
-                if (isEnabled) {
-                    this.killBtn.setTexture('killBtnEnabled');
-                    this.killBtn.setInteractive();
-                    this.killBtn.setScale(0.035);
-                } else {
-                    this.killBtn.setTexture('killBtnDisabled');
-                    this.killBtn.disableInteractive();
-                    this.killBtn.setScale(0.05);
-                }
-            };
-            // Initialize button state
-            updateKillButtonState(false);
 
             let localPlayerRole;
             const playerRoles = JSON.parse(playerRoleList);
             console.log("Player Roles: ", playerRoles);
 
             for (let i = 0; i < playerRoles.length; i++) {
-                if (playerId === playerRoles[i].playerId) {
+                if (playerId == playerRoles[i].playerId) {
                     localPlayerRole = playerRoles[i].role;
                     break;
                 }
             }
 
-            const localPlayer = createPlayerSprite(scene, sessionId, username, localPlayerRole );
-            players.current.set(sessionId, localPlayer);
+            const updateKillButtonState = (isEnabled) => {
+                if (this.killBtn) {
+                    if (isEnabled) {
+                        this.killBtn.setTexture('killBtnEnabled');
+                        this.killBtn.setInteractive();
+                        this.killBtn.setScale(0.035);
+                    } else {
+                        this.killBtn.setTexture('killBtnDisabled');
+                        this.killBtn.disableInteractive();
+                        this.killBtn.setScale(0.05);
+                    }
+                }
+            };
 
-            this.killBtn.on('pointerdown', () => {
-                if (this.killBtn.input.enabled) {
+            if (localPlayerRole === 'IMPOSTER') {
+                this.killBtn = this.add.image(1450, 680, 'killBtnDisabled');
+                this.killBtn.setInteractive();
+                this.killBtn.setScale(0.045);
+                this.killBtn.setScrollFactor(0);
+
+                // Initialize button state
+                updateKillButtonState(false);
+
+                this.killBtn.on('pointerdown', () => {
+                    if (this.killBtn.input.enabled) {
                         console.log('Kill button clicked');
 
                         if (targetPlayerIdRef.current) {
@@ -143,9 +143,11 @@ const Game = () => {
                             console.warn('No target player selected for elimination');
                         }
                     }
-            });
+                });
+            }
 
-
+            const localPlayer = createPlayerSprite(scene, sessionId, username, localPlayerRole);
+            players.current.set(sessionId, localPlayer);
 
             TASK_POSITIONS.forEach((pos) => {
                 const task = this.add.image(pos.x, pos.y, 'task');
@@ -183,17 +185,17 @@ const Game = () => {
                 repeat: -1
             });
 
-            // const ghostFrames = [];
-            // for (let i = 1; i <= 48; i++) {
-            //     ghostFrames.push({ key: `ghost${i}` });
-            // }
-            //
-            // this.anims.create({
-            //     key: 'ghostAnim',
-            //     frames: ghostFrames,
-            //     frameRate: 10,
-            //     repeat: -1
-            // });
+            /*const ghostFrames = [];
+            for (let i = 1; i <= 48; i++) {
+                ghostFrames.push({ key: `ghost${i}` });
+            }
+
+            this.anims.create({
+                key: 'ghostAnim',
+                frames: ghostFrames,
+                frameRate: 10,
+                repeat: -1
+            });*/
 
             this.input.keyboard.on('keydown', (event) => {
                 if (!pressedKeys.current.includes(event.code)) {
@@ -221,7 +223,7 @@ const Game = () => {
                         return;
                     }
 
-                    if (playerPosition.wouldCollide) {
+                    if (localPlayerRole === 'IMPOSTER' && playerPosition.wouldCollide) {
                         setIsKillBtnEnabled(true);
                         updateKillButtonState.call(this, true);
                         targetPlayerIdRef.current = playerPosition.targetPlayerId;
@@ -251,7 +253,6 @@ const Game = () => {
                         players.current.set(playerPosition.sessionId, newPlayer);
                     }
                 });
-
 
                 gameRoomStompClientRef.current.subscribe(`/topic/join/${roomId}`, (message) => {
                     const playerData = JSON.parse(message.body);
@@ -357,7 +358,8 @@ const Game = () => {
                         positionY: localPlayerData.sprite.y,
                         flip: flip,
                         roomId: roomId,
-                        sessionId: sessionId
+                        sessionId: sessionId,
+                        username: username
                     }), {});
                 }
             } else {
@@ -375,7 +377,6 @@ const Game = () => {
         }
 
         function createPlayerSprite(scene, sessionId, username, role) {
-
             console.log('Creating player sprite with username:', username, 'and role:', role);
             let newPlayerSprite = scene.add.sprite(PLAYER_START_X, PLAYER_START_Y, 'player');
             newPlayerSprite.displayHeight = PLAYER_HEIGHT;
@@ -404,7 +405,7 @@ const Game = () => {
                 }
             }).setOrigin(0.5, 0.5).setDepth(1);
 
-            //Add the player text to the playersprite
+            // Add the player text to the playersprite
             newPlayerSprite.text = username;
 
             return {
@@ -459,7 +460,6 @@ const Game = () => {
             playerSprite.play('ghostAnim'); // Play the ghost animation
         }
 
-
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
                 movementStompClientRef.current.disconnect();
@@ -467,7 +467,6 @@ const Game = () => {
             game.destroy(true);
         };
     }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
-
 
     return (
         <div id="game-container">
