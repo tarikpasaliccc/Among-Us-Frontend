@@ -80,7 +80,7 @@ const Game = () => {
             console.log("Player Roles: ", playerRoles);
 
             for (let i = 0; i < playerRoles.length; i++) {
-                if (playerId == playerRoles[i].playerId) {
+                if (playerId === playerRoles[i].playerId) {
                     localPlayerRole = playerRoles[i].role;
                     break;
                 }
