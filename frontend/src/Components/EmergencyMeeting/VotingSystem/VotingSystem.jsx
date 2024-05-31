@@ -17,8 +17,8 @@ const VotingSystem = () => {
     const [voteResults, setVoteResults] = useState({});
     const [countdown, setCountdown] = useState(10);
     const [newMessageNotification, setNewMessageNotification] = useState(false);
+    const playerRoleList = sessionStorage.getItem('rolesList');
 
-    const navigate = useNavigate();
 
     const roomId = sessionStorage.getItem('roomId');
     const localUsername = sessionStorage.getItem('username');
@@ -65,6 +65,11 @@ const VotingSystem = () => {
                 setVotedOut(null);
                 //ToDO: Display a message to all players that the vote was skipped with animation
                 alert("Voting was skipped, no player was ejected.");
+
+            } else if (result.status === "tie") {
+                setVoteResults({});
+                setVotedOut(null);
+                alert("There was a tie, no player was ejected.");
             } else {
                 setVoteResults(result.voteCount);
                 setVotedOut(result.mostVotedPlayerId);
@@ -79,9 +84,8 @@ const VotingSystem = () => {
                     console.error('Error setting player to dead:', error);
                 }
 
-                alert("Player " + result.mostVotedPlayerUsername + " was ejected.");
+                alert("Player " + result.mostVotedPlayerUsername + " was ejected. He wan an " + result.mostVotedPlayerRole + "!");
                 //ToDO: Display a message to all players that the player was ejected with animation
-                //ToDO: Check if the player is an impostor or not and display the result to all players
             }
         } catch (error) {
             console.error('Error concluding vote:', error);
@@ -89,6 +93,17 @@ const VotingSystem = () => {
     };
 
     const votePlayer = (targetPlayerId, targetPlayerUsername) => {
+        const playerRoles = JSON.parse(playerRoleList);
+        let targetPlayerRole = null;
+        for (let i = 0; i < playerRoles.length; i++) {
+            if (playerRoles[i].playerId == targetPlayerId) {
+                targetPlayerRole = playerRoles[i].role;
+                break;
+            }
+        }
+
+        console.log('Voting for player:', targetPlayerId, targetPlayerUsername, targetPlayerRole)
+
         setVotes((prevVotes) => {
             const newVotes = { ...prevVotes };
 
@@ -107,7 +122,8 @@ const VotingSystem = () => {
                     voterId: playerId,
                     voterUsername: localUsername,
                     targetPlayerId: null,
-                    targetPlayerUsername: targetPlayerUsername
+                    targetPlayerUsername: targetPlayerUsername,
+                    targetPlayerRole: targetPlayerRole
                 }).then(response => {
                     console.log('Vote removal response:', response);
                 }).catch(error => {
@@ -122,7 +138,8 @@ const VotingSystem = () => {
                     voterId: playerId,
                     voterUsername: localUsername,
                     targetPlayerId: targetPlayerId,
-                    targetPlayerUsername: targetPlayerUsername
+                    targetPlayerUsername: targetPlayerUsername,
+                    targetPlayerRole: targetPlayerRole
                 }).then(response => {
                     console.log('Vote response:', response);
                 }).catch(error => {
@@ -227,10 +244,4 @@ const VotingSystem = () => {
 
 export default VotingSystem;
 
-//ToDo: Frontend: Display the user with a ejected message after the vote end
-//ToDO: Frontend: After the vote end it should check if the player with the most votes is an impostor or not and display the result to all players
 
-
-//ToDo: Backend: Check what role the player has and send it to the frontend
-//ToDo: Backend: Check if the player with the most votes is an impostor or not and send the result to the frontend
-//ToDo: Backend: Set the player with the most votes to dead

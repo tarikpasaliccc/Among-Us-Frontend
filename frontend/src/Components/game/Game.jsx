@@ -7,6 +7,8 @@ import Stomp from 'webstomp-client';
 import taskImg from "./assets/task.png";
 import killBtnEnabledImg from "./assets/kill-btn-enabled.png";
 import killBtnDisabledImg from "./assets/kill-btn-disabled.png";
+import ghostSprite from "./assets/ghost.png";
+import luigiSprite from "./assets/luigiSprite.png";
 import {
     PLAYER_SPRITE_HEIGHT,
     PLAYER_SPRITE_WIDTH,
@@ -27,17 +29,15 @@ const Game = () => {
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
     const username = sessionStorage.getItem('username');
-    const playerRoleList = sessionStorage.getItem('role');
+    const playerRoleList = sessionStorage.getItem('rolesList');
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
-    const [killBtnDisabled, setKillBtnDisabled] = useState(false);
     const targetPlayerIdRef = useRef(null);
     const navigate = useNavigate();
     const movementStompClientRef = useRef(null);
     const gameRoomStompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
-    const [isKillBtnEnabled, setIsKillBtnEnabled] = useState(false);
 
     useEffect(() => {
         const config = {
@@ -67,9 +67,15 @@ const Game = () => {
                 frameHeight: PLAYER_SPRITE_HEIGHT
             });
 
-            this.load.spritesheet('otherPlayer', playerSprite, {
-                frameWidth: PLAYER_SPRITE_WIDTH,
-                frameHeight: PLAYER_SPRITE_HEIGHT,
+            this.load.spritesheet('luigiPlayer', luigiSprite, {
+                frameWidth: 75.667,
+                frameHeight: 118,
+            });
+
+
+            this.load.spritesheet('ghostPlayer', ghostSprite, {
+                frameWidth: 92,
+                frameHeight: 110,
             });
 
             this.load.image('task', taskImg);
@@ -77,10 +83,6 @@ const Game = () => {
             this.load.image('killBtnEnabled', killBtnEnabledImg);
             this.load.image('killBtnDisabled', killBtnDisabledImg);
 
-            /*// Load ghost sprites
-            for (let i = 1; i <= 48; i++) {
-                this.load.image(`ghost${i}`, `assets/Ghost/ghostbob${String(i).padStart(4, '0')}.png`);
-            }*/
         }
 
         function create() {
@@ -134,7 +136,6 @@ const Game = () => {
                                 console.log('Player set to dead: ', response.data);
                                 const playerData = players.current.get(targetPlayerIdRef.current);
                                 if (playerData && playerData.sprite) {
-                                    turnPlayerToGhost(scene, playerData.sprite);
                                 }
                             } catch (error) {
                                 console.error('Error setting player to dead:', error);
@@ -164,14 +165,13 @@ const Game = () => {
             emergencyButton.setInteractive();
             emergencyButton.on('pointerdown', () => {
                 if (isConnected) {
-                    //Todo: navigate to emergency meeting page and then to the voting and chat page
                     console.log('Emergency button clicked');
                     emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {
                     });
                 }
                 try {
                     const response = axios.post(`http://localhost:8083/api/voting/initiateVoting/${roomId}`, () => {
-                        console.log('Voting initiated');
+                        console.log(response.data)
                     });
                 } catch (error) {
                     console.error('Error initiating voting:', error);
@@ -185,17 +185,14 @@ const Game = () => {
                 repeat: -1
             });
 
-            /*const ghostFrames = [];
-            for (let i = 1; i <= 48; i++) {
-                ghostFrames.push({ key: `ghost${i}` });
-            }
 
             this.anims.create({
-                key: 'ghostAnim',
-                frames: ghostFrames,
-                frameRate: 10,
+                key: 'floating',
+                frames: this.anims.generateFrameNumbers('ghostPlayer'),
+                frameRate: 16,
                 repeat: -1
-            });*/
+            });
+
 
             this.input.keyboard.on('keydown', (event) => {
                 if (!pressedKeys.current.includes(event.code)) {
@@ -224,13 +221,11 @@ const Game = () => {
                     }
 
                     if (localPlayerRole === 'IMPOSTER' && playerPosition.wouldCollide) {
-                        setIsKillBtnEnabled(true);
                         updateKillButtonState.call(this, true);
                         targetPlayerIdRef.current = playerPosition.targetPlayerId;
                         console.log('Would collide with player:', playerPosition.targetPlayerId);
                         console.log('Target player id:', targetPlayerIdRef.current);
                     } else {
-                        setIsKillBtnEnabled(false);
                         updateKillButtonState.call(this, false);
                         targetPlayerIdRef.current = null;
                         console.log('Would not collide with any player');
@@ -455,10 +450,7 @@ const Game = () => {
             }
         }
 
-        function turnPlayerToGhost(scene, playerSprite) {
-            playerSprite.setTexture('ghost1'); // Set the initial texture
-            playerSprite.play('ghostAnim'); // Play the ghost animation
-        }
+
 
         return () => {
             if (movementStompClientRef.current && movementStompClientRef.current.connected) {
@@ -466,7 +458,7 @@ const Game = () => {
             }
             game.destroy(true);
         };
-    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate]);
+    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate, isConnected, playerRoleList, emergencyStompClient]);
 
     return (
         <div id="game-container">
