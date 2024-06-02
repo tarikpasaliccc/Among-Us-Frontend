@@ -5,6 +5,8 @@ import './roomPage.css';
 import crewImage from './crew.png';
 import reloadImage from './reload-btn.png';
 import exitImage from './exit-btn.png';
+import backgroundImage from './gameRoom-bg.jpg';
+
 
 function RoomPage() {
     const {roomId} = useParams();
@@ -76,7 +78,7 @@ function RoomPage() {
     const isStartGameEnabled = isHost && players.length >= 4;
 
     return (
-        <div className="room-page">
+        <div className="room-page" style={{backgroundImage: `url(${backgroundImage})`}}>
             <div className="top-bar">
                 <h1 className="roomID">ROOM ID: {roomId}</h1>
                 <img src={crewImage} alt="Crew" className="crewImg" />
