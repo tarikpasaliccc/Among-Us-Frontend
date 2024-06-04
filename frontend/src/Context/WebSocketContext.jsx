@@ -8,6 +8,9 @@ export const WebSocketProvider = ({ children }) => {
     const emergencyStompClientRef = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
 
+    const gameRoomStompClientRef = useRef(null);
+    const [isGameRoomConnected, setIsGameRoomConnected] = useState(false);
+
     useEffect(() => {
         const emergencySocket = new SockJS('http://localhost:8083/ws/chat');
         emergencyStompClientRef.current = Stomp.over(emergencySocket);
@@ -15,15 +18,27 @@ export const WebSocketProvider = ({ children }) => {
             setIsConnected(true);
         });
 
+        const gameRoomSocket = new SockJS('http://localhost:8081/ws/gameRoom');
+        gameRoomStompClientRef.current = Stomp.over(gameRoomSocket);
+        gameRoomStompClientRef.current.connect({}, () => {
+            setIsGameRoomConnected(true);
+        });
+
         return () => {
             if (emergencyStompClientRef.current) {
                 emergencyStompClientRef.current.disconnect();
+            }
+            if (gameRoomStompClientRef.current) {
+                gameRoomStompClientRef.current.disconnect();
             }
         };
     }, []);
 
     return (
-        <WebSocketContext.Provider value={{ stompClient: emergencyStompClientRef.current, isConnected }}>
+        <WebSocketContext.Provider value={{
+            emergencyStompClient: emergencyStompClientRef.current, isConnected,
+            gameRoomStompClient: gameRoomStompClientRef.current, isGameRoomConnected
+        }}>
             {children}
         </WebSocketContext.Provider>
     );

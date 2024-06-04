@@ -1,12 +1,12 @@
 import "./chat.css";
-import {useCallback, useEffect, useRef, useState} from "react";
+import { useEffect, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 import Stomp from "webstomp-client";
 import { useNavigate } from "react-router-dom";
 import { useWebSocket } from "../../../Context/WebSocketContext";
 import axios from "axios";
 
-const Chat = ({ onClose }) => {
+const Chat = ({ onClose, chatHistory, setChatHistory, onNewMessage }) => {
     const stompClientRef = useRef(null);
     const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
     const sessionId = sessionStorage.getItem('sessionId');
@@ -17,9 +17,21 @@ const Chat = ({ onClose }) => {
     const username = sessionStorage.getItem('username');
 
     const [message, setMessage] = useState('');
-    const [chatHistory, setChatHistory] = useState([]);
 
     useEffect(() => {
+        const fetchChatHistory = async () => {
+            console.log('Fetching chat history for room:', roomId)
+            try {
+                const response = await axios.get(`http://localhost:8083/api/chat/getChatHistory/${roomId}`);
+                console.log('Chat history:', response.data);
+                setChatHistory(response.data);
+            } catch (error) {
+                console.error('Error fetching chat history:', error);
+            }
+        };
+
+        fetchChatHistory().then(r => console.log('Fetched chat history'));
+
         if (isConnected) {
             emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
                 console.log('Joined the emergency meeting chat');
@@ -34,6 +46,8 @@ const Chat = ({ onClose }) => {
                 const chatMessage = JSON.parse(message.body);
                 console.log('Received message: ', chatMessage);
                 setChatHistory(prevHistory => [...prevHistory, chatMessage]);
+                console.log('New message from ' + chatMessage.sender);
+                //onNewMessage(chatMessage.sender);
             });
         });
 
@@ -42,7 +56,7 @@ const Chat = ({ onClose }) => {
                 stompClientRef.current.disconnect();
             }
         };
-    }, [isConnected, roomId]);
+    }, [isConnected, roomId, setChatHistory]);
 
     const sendMessage = () => {
         if (message.trim() !== '' && stompClientRef.current && stompClientRef.current.connected) {
@@ -50,6 +64,7 @@ const Chat = ({ onClose }) => {
                 content: message,
                 sender: username,
                 type: "CHAT",
+                roomId: roomId,
             };
 
             stompClientRef.current.send(`/app/chat/sendMessage/${roomId}`, JSON.stringify(chatMessage), {});
@@ -96,8 +111,6 @@ const Chat = ({ onClose }) => {
             </div>
         </div>
     );
-
-
 };
 
 export default Chat;

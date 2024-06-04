@@ -1,5 +1,6 @@
+
 import React, {useCallback, useEffect, useState} from 'react';
-import {useLocation, useNavigate, useParams} from 'react-router-dom';
+import {useNavigate, useParams} from 'react-router-dom';
 import axios from "axios";
 import './roomPage.css';
 import crewImage from './crew.png';
@@ -12,10 +13,8 @@ function RoomPage() {
     const {roomId} = useParams();
     const [players, setPlayers] = useState([]);
     const navigate = useNavigate();
-    const token = sessionStorage.getItem('jwtToken');
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
-    const location = useLocation();
     const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
 
@@ -59,12 +58,11 @@ function RoomPage() {
 
     const handleStartGame = async () => {
         sessionStorage.setItem('roomId', roomId);
-        console.log('Starting game for room:', roomId);
 
         try {
             const response = await axios.post(`http://localhost:8081/api/gameRooms/assignRoles/${roomId}`);
-            console.log('Roles were assigned:', response.data);
-            sessionStorage.setItem('role', response.data.role);
+            console.log('Starting game for room:', roomId);
+            sessionStorage.setItem('rolesList', JSON.stringify(response.data.players));
             navigate('/loadingScreen');
         } catch (error) {
             console.error('Error starting game:', error);

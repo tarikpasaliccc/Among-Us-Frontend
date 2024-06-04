@@ -1,53 +1,57 @@
-import {useLocation, useNavigate} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './LoadingScreen.css';
-import {useEffect, useRef} from "react";
-import SockJS from "sockjs-client";
-import Stomp from 'webstomp-client';
-
+import { useEffect, useRef } from 'react';
+import { useWebSocket } from '../../Context/WebSocketContext';
 
 function LoadingScreen() {
-    const stompClientRef = useRef(null);
+    const { gameRoomStompClient, isGameRoomConnected } = useWebSocket();
     const sessionId = sessionStorage.getItem('sessionId');
     const token = sessionStorage.getItem('jwtToken');
     const roomId = sessionStorage.getItem('roomId');
     const playerId = sessionStorage.getItem('playerId');
-    const location = useLocation();
     const navigate = useNavigate();
     const username = sessionStorage.getItem('username');
 
     useEffect(() => {
-        console.log('Connecting to websocket with username:', username);
-        const socket = new SockJS('http://localhost:8081/ws/gameRoom');
-        stompClientRef.current = Stomp.over(socket);
+        let subscription;
+        console.log('Starting game for room:', roomId);
+        console.log('Player ID:', playerId);
+        console.log('Username:', username);
 
-        stompClientRef.current.connect({}, () => {
-            stompClientRef.current.subscribe(`/topic/startGame/${roomId}`, (message) => {
+        if (isGameRoomConnected) {
+            subscription = gameRoomStompClient.subscribe(`/topic/startGame/${roomId}`, (message) => {
                 const gameInfo = JSON.parse(message.body);
-                if (gameInfo.roomId === roomId && gameInfo.started) {
+                console.log('Game info:', gameInfo);
+                if (gameInfo.id === roomId && gameInfo.started) {
                     console.log('Game started');
+                    //navigate('/game');
                 }
             });
 
-            stompClientRef.current.send('/app/startGame', JSON.stringify({
+            gameRoomStompClient.send('/app/startGame',{}, JSON.stringify({
                 roomId: roomId,
                 playerId: playerId,
                 username: username
-            }), {});
-        });
+            }));
+
+            gameRoomStompClient.send('/app/join', {}, JSON.stringify({
+                roomId: roomId,
+                playerId: playerId,
+                username: username
+            }));
+        }
 
         const timeout = setTimeout(() => {
-            navigate("/game");
+            navigate('/game');
         }, 5000);
 
         return () => {
-            if (stompClientRef.current && stompClientRef.current.connected) {
-                stompClientRef.current.disconnect();
+            if (subscription) {
+                subscription.unsubscribe();
             }
             clearTimeout(timeout);
         };
-    }, [navigate, roomId, sessionId, token]);
-
-
+    }, [isGameRoomConnected, gameRoomStompClient, navigate, roomId, playerId, username]);
 
     return (
         <div className="among-us-loading-screen">
@@ -56,6 +60,5 @@ function LoadingScreen() {
         </div>
     );
 }
-
 
 export default LoadingScreen;
