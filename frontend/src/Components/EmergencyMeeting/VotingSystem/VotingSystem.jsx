@@ -4,7 +4,8 @@ import axios from "axios";
 import playerIcon from "./playerIcon.png";
 import Chat from "../Chat/Chat";
 import VotedOutAnimation from "./VotedOutAnimation/VotedOutAnimation";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useWebSocket } from "../../../Context/WebSocketContext";
 
 const VotingSystem = () => {
     const [players, setPlayers] = useState([]);
@@ -17,13 +18,13 @@ const VotingSystem = () => {
     const [voteResults, setVoteResults] = useState({});
     const [countdown, setCountdown] = useState(10);
     const [newMessageNotification, setNewMessageNotification] = useState(false);
+    const { emergencyStompClient, isConnected } = useWebSocket();
+    const navigate = useNavigate();
+
     const playerRoleList = sessionStorage.getItem('rolesList');
-
-
     const roomId = sessionStorage.getItem('roomId');
     const localUsername = sessionStorage.getItem('username');
     const playerId = sessionStorage.getItem('playerId');
-
 
     const fetchChatRoomData = useCallback(async () => {
         try {
@@ -53,19 +54,17 @@ const VotingSystem = () => {
         return () => clearInterval(timer);
     }, [fetchChatRoomData]);
 
-
     const handleVotingEnd = async () => {
         console.log('Voting ended.');
         try {
             const response = await axios.get(`http://localhost:8083/api/voting/results/${roomId}`);
             const result = response.data;
             console.log('Vote result:', result);
+
             if (result.status === "skipped") {
                 setVoteResults({});
                 setVotedOut(null);
-                //ToDO: Display a message to all players that the vote was skipped with animation
                 alert("Voting was skipped, no player was ejected.");
-
             } else if (result.status === "tie") {
                 setVoteResults({});
                 setVotedOut(null);
@@ -73,23 +72,34 @@ const VotingSystem = () => {
             } else {
                 setVoteResults(result.voteCount);
                 setVotedOut(result.mostVotedPlayerId);
+
                 // Send the result to the backend to set the player to dead
                 try {
-                    const response = await axios.post('http://localhost:8081/api/gameRooms/eliminatePlayer', {
+                    const eliminateResponse = await axios.post('http://localhost:8081/api/gameRooms/eliminatePlayer', {
                         gameRoomId: roomId,
                         votedPlayerId: result.mostVotedPlayerId
-                    })
-                    console.log('Player set to dead: ', response.data);
+                    });
+                    console.log('Player set to dead: ', eliminateResponse.data);
                 } catch (error) {
                     console.error('Error setting player to dead:', error);
                 }
 
-                alert("Player " + result.mostVotedPlayerUsername + " was ejected. He wan an " + result.mostVotedPlayerRole + "!");
-                //ToDO: Display a message to all players that the player was ejected with animation
+                alert(`Player ${result.mostVotedPlayerUsername} was ejected. He was an ${result.mostVotedPlayerRole}!`);
+            }
+
+            // Send emergency meeting end signal
+            if (isConnected) {
+                emergencyStompClient.send(`/app/emergencyMeetingEnd/${roomId}`, {}, () => {
+                    console.log('Emergency meeting is being ended');
+                    navigate('/game');
+                });
+            } else {
+                navigate('/game');
             }
         } catch (error) {
             console.error('Error concluding vote:', error);
         }
+        navigate('/game');
     };
 
     const votePlayer = (targetPlayerId, targetPlayerUsername) => {
@@ -102,7 +112,7 @@ const VotingSystem = () => {
             }
         }
 
-        console.log('Voting for player:', targetPlayerId, targetPlayerUsername, targetPlayerRole)
+        console.log('Voting for player:', targetPlayerId, targetPlayerUsername, targetPlayerRole);
 
         setVotes((prevVotes) => {
             const newVotes = { ...prevVotes };
@@ -243,5 +253,3 @@ const VotingSystem = () => {
 }
 
 export default VotingSystem;
-
-
