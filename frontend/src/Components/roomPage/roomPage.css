@@ -1,14 +1,25 @@
+@font-face {
+    font-family: 'advancedPixel';
+    src: url('../fonts/advanced_pixel-7.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 .room-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+    position: relative;
     width: 100%;
     height: 100vh;
-    background-size: cover;
-    background-color: black;
-    color: black;
-    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+.video-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
 }
 
 .top-bar {
@@ -31,64 +42,70 @@
     font-size: 20px;
 }
 
-.crewImg {
+/*.crewImg {
     width: 40%;
     height: auto;
+}*/
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 .refresh-btn {
-    position: absolute;
+    position: fixed;
     right: 105px;
-    top: 60px;
-    transform: translateY(-50%);
+    top: 38px;
     padding: 0.2px;
     border: none;
     cursor: pointer;
     border-radius: 100%;
-    width: 60px;
-    height: 60px;
+    width: 65px;
+    height: 65px;
 }
 
 .refresh-btn:hover {
-    border-color: #D9D9D9;
-    box-shadow: 0 0 10px #D9D9D9;
+    animation: rotate 0.8s;
+    transform-origin: center;
 }
 
+
 .exit-btn {
-    position: absolute;
-    right: 20px;
-    top: 60px;
-    transform: translateY(-50%);
+    position: fixed;
+    right: 38px;
+    top: 36px;
     padding: 0.2px;
     border: none;
     cursor: pointer;
     border-radius: 100%;
-    width: 70px;
-    height: 70px;
-}
-
-.exit-btn:hover {
-    border-color: #D9D9D9;
-    box-shadow: 0 0 10px #D9D9D9;
+    width: 68px;
+    height: 68px;
 }
 
 .player-cards {
-    display: grid;
-    justify-content: center;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        justify-content: center;
+        margin-right: 2px; /* Adjust this value to reduce the gap between the cards */
+        margin-top: -10px; /* Adjust this to position the player cards closer to the title */
+        margin-left: 13%; /* Add this to move the cards more to the right */
 }
+
 
 .player-card {
     display: flex;
     align-items: center;
-    border: 1px solid white;
+    border: none;
     justify-content: flex-start;
     border-radius: 30px !important;
     padding: 10px 20px !important;
     width: 200px !important;
     height: 40px !important;
-    background-color: black !important;
+    background-color: rgba(0, 0, 0, 0.1);
     margin-top: 40px;
     color: white;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -96,9 +113,9 @@
 }
 
 .player-icon {
-    width: 20px;
-    height: 20px;
-    margin-right: 10px;
+    width: 50px;
+    height: 50px;
+    margin-right: -60px;
     background-image: url('./playerIcon.png');
     background-size: cover;
     background-position: center;
@@ -106,14 +123,22 @@
 }
 
 .player-username {
-    font-size: 16px;
-    flex-grow: 1; /* Ensure the username takes up remaining space */
+    font-size: 20px;
+    flex-grow: 1;
+}
+
+
+h2 {
+    color: white;
+    font-size: 2em;
+    margin-top: 20px;
 }
 
 h1 {
     color: white;
-    font-size: 2em;
+    font-size: 100px;
     margin-top: 20px;
+    font-family: 'advancedPixel', sans-serif;
 }
 
 .button-container-rooms {
@@ -128,20 +153,20 @@ h1 {
 
 .start-game-btn {
     font-size: 17px;
-    background-color: grey !important;
-    color: black !important;
     padding: 10px 40px !important;
-    border: none;
     margin-right: 30px;
     border-radius: 20px !important;
     cursor: pointer;
     font-family: monospace;
+    margin-bottom: 25px;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid white;
 }
 
 .start-game-btn:hover {
-    border-color: darkred;
-    box-shadow: 0 0 40px darkred;
-    background-color: lightgrey !important;
+    box-shadow: 0 0 30px chartreuse;
 }
 
 .waiting-text {

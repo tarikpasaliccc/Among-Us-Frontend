@@ -1,13 +1,9 @@
-
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useNavigate, useParams} from 'react-router-dom';
 import axios from "axios";
 import './roomPage.css';
-import crewImage from './crew.png';
-import reloadImage from './reload-btn.png';
+import reloadImage from './reloadbtn.png';
 import exitImage from './exit-btn.png';
-import backgroundImage from './gameRoom-bg.jpg';
-
 
 function RoomPage() {
     const {roomId} = useParams();
@@ -18,6 +14,7 @@ function RoomPage() {
     const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
 
+    const videoRef = useRef(null);
 
     const fetchRoomData = useCallback(async () => {
         try {
@@ -69,20 +66,21 @@ function RoomPage() {
         }
     }
 
-
-
-
     const isHost = hostSessionsId === sessionId;
     const isStartGameEnabled = isHost && players.length >= 4;
 
     return (
-        <div className="room-page" style={{backgroundImage: `url(${backgroundImage})`}}>
+        <div className="room-page">
+            <video ref={videoRef} autoPlay loop muted playsInline className="video-background">
+                <source src="/list-background.mp4" type="video/mp4"/>
+                Your browser does not support the video tag.
+            </video>
             <div className="top-bar">
-                <h1 className="roomID">ROOM ID: {roomId}</h1>
-                <img src={crewImage} alt="Crew" className="crewImg" />
-                <img src={reloadImage} alt="Reload" className="refresh-btn" onClick={refreshPlayers} />
+                <h2 className="roomID">ROOM ID: {roomId}</h2>
+                <h1 className="crew-text">THE CREW</h1>
+                <img src={reloadImage} alt="Reload" className="refresh-btn" onClick={refreshPlayers}/>
             </div>
-            <img src={exitImage} alt="Exit" className="exit-btn" onClick={handleLeaveRoom} />
+            <img src={exitImage} alt="Exit" className="exit-btn" onClick={handleLeaveRoom}/>
             <div className="player-cards">
                 {players.length === 0 ? (
                     <p>No players in this room</p>
@@ -102,7 +100,7 @@ function RoomPage() {
                     onClick={handleStartGame}
                     // disabled={!isStartGameEnabled}
                 >
-                    Start
+                    start
                 </button>
             </div>
         </div>
@@ -111,8 +109,3 @@ function RoomPage() {
 }
 
 export default RoomPage;
-
-
-//ToDo: When a player closes the tab, the player should be removed from the room
-//ToDo: When the host closes the tab, the room should be deleted
-//ToDo: When the host starts the game, the game should start for all players in the room
