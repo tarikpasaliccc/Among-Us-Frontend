@@ -1,8 +1,10 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import axios from "axios";
 import {useNavigate} from "react-router-dom";
 import "./rooms.css"
 import reloadImage from "../roomPage/reload-btn.png";
+import "./rooms.css";
+import homeicon from "./home-icon.png";
 
 function RoomList() {
     const [rooms, setRooms] = useState([]);
@@ -14,6 +16,7 @@ function RoomList() {
     const playerId = sessionStorage.getItem('playerId');
     const username = sessionStorage.getItem('username');
 
+    const videoRef = useRef(null);
 
     const fetchRooms = useCallback(async () => {
         try {
@@ -32,9 +35,16 @@ function RoomList() {
         }
     }, []);
 
-
     useEffect(() => {
         fetchRooms().then(r => console.log('Fetched rooms'));
+
+        // Ensure video playback
+        const video = videoRef.current;
+        if (video) {
+            video.play().catch(error => {
+                console.error('Error attempting to play video:', error);
+            });
+        }
     }, [fetchRooms]);
 
     const handleJoinRoom = async (e, roomId, started) => {
@@ -61,7 +71,6 @@ function RoomList() {
         }
     };
 
-
     const refreshRooms = () => {
         fetchRooms().then(r => console.log('Fetched rooms'));
     };
@@ -73,7 +82,7 @@ function RoomList() {
         }
 
         try {
-            const response = await axios.post(`http://localhost:8081/api/gameRooms/createGameRoom`, {
+            const response = await axios.post('http://localhost:8081/api/gameRooms/createGameRoom', {
                 token: token,
                 sessionId: sessionId,
                 roomName: newRoomName
@@ -88,8 +97,6 @@ function RoomList() {
         }
     };
 
-
-
     const handleDeleteRoom = async (e, roomId) => {
         e.preventDefault();
 
@@ -99,7 +106,7 @@ function RoomList() {
         }
 
         try {
-            const response = await axios.delete(`http://localhost:8081/api/gameRooms/deleteGameRoom`, {
+            const response = await axios.delete('http://localhost:8081/api/gameRooms/deleteGameRoom', {
                 params: {
                     roomId: roomId,
                     sessionId: sessionId,
@@ -112,24 +119,36 @@ function RoomList() {
             console.error('Error deleting room:', error);
             alert('Error deleting room');
         }
+    };
 
-    }
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleCreateRoom();
+        }
+    };
 
     return (
         <div className="full-page-wrapper">
+            <video ref={videoRef} autoPlay loop muted playsInline className="video-background">
+                <source src="/list-background.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
             <div className="main-wrapper">
-                <h1 className="joinRoom">Join a Room</h1>
+                <a href="/" className="home-button">
+                    <img src={homeicon} alt="Home" style={{width: '60px', height: '60px'}}/>
+                </a>
+                <h1 className="joinRoom">ACTIVE ROOMS</h1>
                 <img src={reloadImage} alt="Reload" className="refresh-btn2" onClick={refreshRooms}/>
                 {!Array.isArray(rooms) || rooms.length === 0 ? (
-                    <p>No active rooms, create one yourself ➘</p>
+                    <p>No active rooms, create one yourself!</p>
                 ) : (
                     <ul className="room-list">
                         {rooms.map((room) => (
                             <li key={room.id} className="room-item">
                                 <span>{room.name}</span>
-                                <button className="rooms-btn" onClick={(e) => handleJoinRoom(e, room.id, room.started)}>join</button>
+                                <button className="join-btn" onClick={(e) => handleJoinRoom(e, room.id,room.started)}>join</button>
                                 {room.createdBy === sessionId && (
-                                    <button className="rooms-btn" id="delete-btn"
+                                    <button className="delete-btn" id="delete-btn"
                                             onClick={(e) => handleDeleteRoom(e, room.id)}>delete</button>
                                 )}
                             </li>
@@ -138,20 +157,21 @@ function RoomList() {
                 )}
                 <div className="main-container">
                     <div className="button-container">
-                        <button onClick={() => setIsModalOpen(true)}>Create Room</button>
+                        <button onClick={() => setIsModalOpen(true)}>create room</button>
                     </div>
 
                     {isModalOpen && (
                         <div className="modal">
-                            <h2>Create New Room</h2>
+                            <h2>create new room</h2>
                             <input
                                 type="text"
-                                placeholder="Enter room name"
+                                placeholder="enter room name"
                                 value={newRoomName}
                                 onChange={(e) => setNewRoomName(e.target.value)}
+                                onKeyDown={handleKeyPress}
                             />
-                            <button onClick={handleCreateRoom} className="createRoom-btn">Create</button>
-                            <button onClick={() => setIsModalOpen(false)}>Cancel</button>
+                            <button onClick={handleCreateRoom} className="createRoom-btn">create</button>
+                            <button onClick={() => setIsModalOpen(false)} className="cancel-btn">delete</button>
                         </div>
                     )}
 
@@ -160,9 +180,6 @@ function RoomList() {
             </div>
         </div>
     );
-
-
 }
-
 
 export default RoomList;

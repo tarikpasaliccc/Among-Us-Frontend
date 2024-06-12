@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
 import logo from './logo.png';
-import icon from './homeicon.png';
 import './home.css';
 import backgroundImage from './homebackground2.jpg'
 import {useNavigate} from "react-router-dom";
@@ -49,10 +48,6 @@ const Home = () => {
             height: '100vh',
             overflow: 'hidden'
         }}>
-            <a href="/" className="home-button">
-                <img src={icon} alt="Home" style={{width: '43px', height: '40px'}}/>
-            </a>
-
             <div className="content">
                 <img src={logo} className="logo mb-4" alt="Logo"/>
                 <div className="menu">
