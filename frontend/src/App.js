@@ -6,10 +6,9 @@ import LoadingScreen from "./Components/loadingScreen/loadingScreen";
 import RoomList from "./Components/roomsList/RoomsList";
 import RoomPage from "./Components/roomPage/RoomPage";
 import {WebSocketProvider} from "./Context/WebSocketContext";
-import EmergencyMeeting from "./Components/EmergencyMeeting/EmergencyMeeting";
-import VotedOutAnimation from "./Components/EmergencyMeeting/VotingSystem/VotedOutAnimation/VotedOutAnimation";
+import VotingSystem from "./Components/EmergencyMeeting/VotingSystem/VotingSystem";
 
-function App() {
+const App = () => {
 
     return (
         <WebSocketProvider>
@@ -21,8 +20,7 @@ function App() {
                         <Route path="/loadingScreen" element={<LoadingScreen/>}/>
                         <Route path="/rooms" element={<RoomList/>}/>
                         <Route path="/room/:roomId" element={<RoomPage/>}/>
-                        <Route path="/emergencyMeeting" element={<EmergencyMeeting/>}/>
-                        <Route path="/votedOut" element={<VotedOutAnimation/>}/>
+                        <Route path="/emergencyMeeting" element={<VotingSystem/>}/>
                     </Routes>
                 </div>
             </Router>

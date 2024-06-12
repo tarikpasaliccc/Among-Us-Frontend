@@ -154,20 +154,21 @@
 
 .skip-vote-button:hover {
     background-color: darkred;
-    transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
 }
 
-.skip-vote-button:active {
-    background-color: #a00;
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.skip-vote-button.selected {
+    background-color: darkred;
+    border: 2px solid red;
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
 }
 
 .skip-vote-button:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.4);
 }
+
 
 
 @keyframes fadeIn {

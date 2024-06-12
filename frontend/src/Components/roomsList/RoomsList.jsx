@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import axios from "axios";
-import {useLocation, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import "./rooms.css"
 import reloadImage from "../roomPage/reload-btn.png";
 
@@ -13,7 +13,6 @@ function RoomList() {
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const username = sessionStorage.getItem('username');
-    const roomId = sessionStorage.getItem('roomId');
 
 
     const fetchRooms = useCallback(async () => {
@@ -38,8 +37,13 @@ function RoomList() {
         fetchRooms().then(r => console.log('Fetched rooms'));
     }, [fetchRooms]);
 
-    const handleJoinRoom = async (e, roomId) => {
+    const handleJoinRoom = async (e, roomId, started) => {
         e.preventDefault();
+
+        if (started) {
+            alert('Game has already started');
+            return;
+        }
 
         try {
             const response = await axios.post('http://localhost:8081/api/gameRooms/joinGameRoom', {
@@ -123,7 +127,7 @@ function RoomList() {
                         {rooms.map((room) => (
                             <li key={room.id} className="room-item">
                                 <span>{room.name}</span>
-                                <button className="rooms-btn" onClick={(e) => handleJoinRoom(e, room.id)}>join</button>
+                                <button className="rooms-btn" onClick={(e) => handleJoinRoom(e, room.id, room.started)}>join</button>
                                 {room.createdBy === sessionId && (
                                     <button className="rooms-btn" id="delete-btn"
                                             onClick={(e) => handleDeleteRoom(e, room.id)}>delete</button>

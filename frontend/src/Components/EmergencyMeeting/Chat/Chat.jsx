@@ -1,21 +1,12 @@
 import "./chat.css";
-import { useEffect, useRef, useState } from "react";
-import SockJS from "sockjs-client";
-import Stomp from "webstomp-client";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useWebSocket } from "../../../Context/WebSocketContext";
 import axios from "axios";
 
-const Chat = ({ onClose, chatHistory, setChatHistory, onNewMessage }) => {
-    const stompClientRef = useRef(null);
-    const { stompClient: emergencyStompClient, isConnected } = useWebSocket();
-    const sessionId = sessionStorage.getItem('sessionId');
-    const token = sessionStorage.getItem('jwtToken');
+const Chat = ({ onClose, chatHistory, setChatHistory, isPlayerAlive }) => {
+    const { emergencyStompClient, isConnected } = useWebSocket();
     const roomId = sessionStorage.getItem('roomId');
-    const playerId = sessionStorage.getItem('playerId');
-    const navigate = useNavigate();
     const username = sessionStorage.getItem('username');
-
     const [message, setMessage] = useState('');
 
     useEffect(() => {
@@ -34,32 +25,26 @@ const Chat = ({ onClose, chatHistory, setChatHistory, onNewMessage }) => {
 
         if (isConnected) {
             emergencyStompClient.subscribe(`/topic/emergencyMeeting/${roomId}`, () => {
+                setChatHistory([]);
                 console.log('Joined the emergency meeting chat');
             });
-        }
 
-        const socket = new SockJS('http://localhost:8083/ws/chat');
-        stompClientRef.current = Stomp.over(socket);
-
-        stompClientRef.current.connect({}, () => {
-            stompClientRef.current.subscribe(`/topic/chat/${roomId}`, (message) => {
+            emergencyStompClient.subscribe(`/topic/chat/${roomId}`, (message) => {
                 const chatMessage = JSON.parse(message.body);
                 console.log('Received message: ', chatMessage);
                 setChatHistory(prevHistory => [...prevHistory, chatMessage]);
                 console.log('New message from ' + chatMessage.sender);
-                //onNewMessage(chatMessage.sender);
             });
-        });
+
+        }
 
         return () => {
-            if (stompClientRef.current && stompClientRef.current.connected) {
-                stompClientRef.current.disconnect();
-            }
         };
-    }, [isConnected, roomId, setChatHistory]);
+    }, [isConnected, roomId, setChatHistory, emergencyStompClient]);
+
 
     const sendMessage = () => {
-        if (message.trim() !== '' && stompClientRef.current && stompClientRef.current.connected) {
+        if (message.trim() !== '' && isConnected) {
             const chatMessage = {
                 content: message,
                 sender: username,
@@ -67,13 +52,16 @@ const Chat = ({ onClose, chatHistory, setChatHistory, onNewMessage }) => {
                 roomId: roomId,
             };
 
-            stompClientRef.current.send(`/app/chat/sendMessage/${roomId}`, JSON.stringify(chatMessage), {});
+            emergencyStompClient.publish({
+                destination: `/app/chat/sendMessage/${roomId}`,
+                body: JSON.stringify(chatMessage)}
+            );
             setMessage('');
         }
     };
 
     const handleKeyPress = (event) => {
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && isPlayerAlive) {
             sendMessage();
         }
     };
@@ -104,8 +92,9 @@ const Chat = ({ onClose, chatHistory, setChatHistory, onNewMessage }) => {
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
                             onKeyPress={handleKeyPress}
+                            disabled={isPlayerAlive ===! 'ALIVE'}
                         />
-                        <button className="chat-button" onClick={sendMessage}>Send</button>
+                        <button className="chat-button" onClick={sendMessage} disabled={isPlayerAlive ===! 'ALIVE'}>Send</button>
                     </div>
                 </div>
             </div>

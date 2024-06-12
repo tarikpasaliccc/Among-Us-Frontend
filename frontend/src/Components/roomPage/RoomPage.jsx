@@ -1,25 +1,25 @@
-
-import React, {useCallback, useEffect, useState} from 'react';
-import {useNavigate, useParams} from 'react-router-dom';
-import axios from "axios";
+import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from 'axios';
 import './roomPage.css';
 import crewImage from './crew.png';
 import reloadImage from './reload-btn.png';
 import exitImage from './exit-btn.png';
+import { useWebSocket } from '../../Context/WebSocketContext';
 
 function RoomPage() {
-    const {roomId} = useParams();
+    const { roomId } = useParams();
     const [players, setPlayers] = useState([]);
     const navigate = useNavigate();
     const sessionId = sessionStorage.getItem('sessionId');
     const playerId = sessionStorage.getItem('playerId');
     const username = sessionStorage.getItem('username');
     const [hostSessionsId, setHostSessionsId] = useState(null);
-
+    const { gameRoomStompClient, isGameRoomConnected } = useWebSocket();
 
     const fetchRoomData = useCallback(async () => {
         try {
-            console.log('Fetching room data for room:', roomId)
+            console.log('Fetching room data for room:', roomId);
             const response = await axios.get(`http://localhost:8081/api/gameRooms/getGameRoom/${roomId}`);
             console.log('Room data:', response);
             setPlayers(response.data.players);
@@ -30,13 +30,31 @@ function RoomPage() {
     }, [roomId]);
 
     useEffect(() => {
-        fetchRoomData().then(r =>   console.log('Fetched room data'));
+        fetchRoomData().then(() => console.log('Fetched room data'));
     }, [fetchRoomData]);
 
-    const refreshPlayers = () =>{
-        fetchRoomData().then(r => console.log('Refreshed players'));
-    }
+    useEffect(() => {
+        if (isGameRoomConnected && gameRoomStompClient.connected) {
+            const subscription = gameRoomStompClient.subscribe(`/topic/startGame/${roomId}`, (message) => {
+                const data = JSON.parse(message.body);
+                console.log('Redirecting to the loading Screen with this data:', data);
+                sessionStorage.setItem('rolesList', JSON.stringify(data.rolesList));
+                sessionStorage.setItem('playerStatus', 'ALIVE');
+                sessionStorage.setItem('roomId', roomId);
+                navigate('/loadingScreen');
+            });
 
+            return () => {
+                if (subscription) {
+                    subscription.unsubscribe();
+                }
+            };
+        }
+    }, [isGameRoomConnected, gameRoomStompClient, navigate, roomId]);
+
+    const refreshPlayers = () => {
+        fetchRoomData().then(() => console.log('Refreshed players'));
+    };
 
     function handleLeaveRoom() {
         async function leaveRoom() {
@@ -50,7 +68,7 @@ function RoomPage() {
                 console.error('Error leaving room:', error);
             }
         }
-        leaveRoom().then(r => console.log('Left room successfully'));
+        leaveRoom().then(() => console.log('Left room successfully'));
         navigate('/rooms');
     }
 
@@ -60,15 +78,50 @@ function RoomPage() {
         try {
             const response = await axios.post(`http://localhost:8081/api/gameRooms/assignRoles/${roomId}`);
             console.log('Starting game for room:', roomId);
-            sessionStorage.setItem('rolesList', JSON.stringify(response.data.players));
-            navigate('/loadingScreen');
+            const rolesList = response.data.players;
+            sessionStorage.setItem('rolesList', JSON.stringify(rolesList));
+            sessionStorage.setItem('playerStatus', 'ALIVE');
+
+            if (isGameRoomConnected && gameRoomStompClient.connected) {
+                console.log('Starting game for room:', roomId);
+                console.log('Player ID:', playerId);
+                console.log('Username:', username);
+
+                gameRoomStompClient.publish({
+                    destination: '/app/startGame',
+                    body: JSON.stringify({
+                        roomId: roomId,
+                        playerId: playerId,
+                        username: username,
+                    })
+                });
+
+                gameRoomStompClient.publish({
+                    destination: '/app/join',
+                    body: JSON.stringify({
+                        roomId: roomId,
+                        playerId: playerId,
+                        username: username,
+                    })
+                });
+
+                // Broadcast to all clients in the room
+                gameRoomStompClient.publish({
+                    destination: `/topic/startGame/${roomId}`,
+                    body: JSON.stringify({rolesList})
+                });
+
+                // Wait for confirmation or a short delay to ensure the message is sent
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                navigate('/loadingScreen');
+            } else {
+                console.error('WebSocket is not connected.');
+            }
         } catch (error) {
             console.error('Error starting game:', error);
         }
-    }
-
-
-
+    };
 
     const isHost = hostSessionsId === sessionId;
     const isStartGameEnabled = isHost && players.length >= 4;
@@ -105,12 +158,6 @@ function RoomPage() {
             </div>
         </div>
     );
-
 }
 
 export default RoomPage;
-
-
-//ToDo: When a player closes the tab, the player should be removed from the room
-//ToDo: When the host closes the tab, the room should be deleted
-//ToDo: When the host starts the game, the game should start for all players in the room

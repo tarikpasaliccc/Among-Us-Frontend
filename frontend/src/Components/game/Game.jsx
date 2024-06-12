@@ -2,8 +2,6 @@ import Phaser from "phaser";
 import React, { useEffect, useRef, useState } from "react";
 import shipImg from "./assets/ship.png";
 import playerSprite from "./assets/player.png";
-import SockJS from 'sockjs-client';
-import Stomp from 'webstomp-client';
 import taskImg from "./assets/task.png";
 import killBtnEnabledImg from "./assets/kill-btn-enabled.png";
 import killBtnDisabledImg from "./assets/kill-btn-disabled.png";
@@ -24,7 +22,7 @@ import {
 } from "./constants";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useWebSocket } from "../../Context/WebSocketContext";
+import { useWebSocket } from "../../Context/WebSocketContext"; // Import the useWebSocket hook
 
 const Game = () => {
     const jwtToken = sessionStorage.getItem('jwtToken');
@@ -32,18 +30,21 @@ const Game = () => {
     const playerId = sessionStorage.getItem('playerId');
     const roomId = sessionStorage.getItem('roomId');
     const username = sessionStorage.getItem('username');
+    const playerStatus = sessionStorage.getItem('playerStatus');
     const playerRoleList = sessionStorage.getItem('rolesList');
     const players = useRef(new Map());
     const [roles, setRoles] = useState([]);
     const pressedKeys = useRef([]);
     const targetPlayerIdRef = useRef(null);
-    const navigate = useNavigate();
     const movementStompClientRef = useRef(null);
+    const navigate = useNavigate();
     const {
         gameRoomStompClient,
         isGameRoomConnected,
         emergencyStompClient,
-        isConnected
+        isConnected,
+        movementStompClient,
+        isMovementConnected
     } = useWebSocket();
 
     useEffect(() => {
@@ -64,8 +65,6 @@ const Game = () => {
         const game = new Phaser.Game(config);
 
         function preload() {
-            const socket = new SockJS('http://localhost:8082/ws/movement');
-            movementStompClientRef.current = Stomp.over(socket);
 
             this.load.image('ship', shipImg);
 
@@ -113,9 +112,16 @@ const Game = () => {
                 }
             }
 
-            const updateKillButtonState = (isEnabled) => {
-                if (scene.killBtn) {
-                    if (isEnabled) {
+            sessionStorage.setItem('localPlayerRole', localPlayerRole)
+            console.log("Local player role: ", localPlayerRole);
+            console.log("Local player status: ", playerStatus);
+
+
+            const killCooldown = 10000;
+            let killCooldownActive = false;
+            const updateKillButtonState = function(isEnabled) {
+                if (this.killBtn && this.killBtn.setTexture) {
+                    if (isEnabled && !killCooldownActive) {
                         this.killBtn.setTexture('killBtnEnabled');
                         this.killBtn.setInteractive();
                         this.killBtn.setScale(0.035);
@@ -125,7 +131,7 @@ const Game = () => {
                         this.killBtn.setScale(0.05);
                     }
                 }
-            };
+            }.bind(this);
 
             if (localPlayerRole === 'IMPOSTER') {
                 this.killBtn = this.add.image(1450, 680, 'killBtnDisabled');
@@ -142,7 +148,7 @@ const Game = () => {
 
                         if (targetPlayerIdRef.current) {
                             try {
-                                const response = await axios.post('http://localhost:8081/api/gameRooms/eliminatePlayer', {
+                                const response = await axios.post('http://localhost:8081/api/gameRooms/killPlayer', {
                                     gameRoomId: roomId,
                                     votedPlayerId: targetPlayerIdRef.current
                                 });
@@ -152,11 +158,14 @@ const Game = () => {
                                     console.log('Target player id:', targetPlayerIdRef.current);
                                     console.log('Players:', players.current);
 
-                                    if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                                        movementStompClientRef.current.send('/app/eliminatePlayer', JSON.stringify({
-                                            roomId: roomId,
-                                            targetPlayerId: targetPlayerIdRef.current
-                                        }));
+                                    if (isMovementConnected) {
+                                        movementStompClient.publish({
+                                            destination: '/app/eliminatePlayer',
+                                            body: JSON.stringify({
+                                                roomId: roomId,
+                                                targetPlayerId: targetPlayerIdRef.current
+                                            })
+                                        });
                                     }
 
                                     const playerData = players.current.get(targetPlayerIdRef.current);
@@ -171,6 +180,13 @@ const Game = () => {
                                     } else {
                                         console.warn('Player data or sprite not found for:', targetPlayerIdRef.current);
                                     }
+
+                                    killCooldownActive = true;
+                                    updateKillButtonState(false);
+                                    setTimeout(() => {
+                                        killCooldownActive = false;
+                                        updateKillButtonState(true);
+                                    }, killCooldown);
                                 } else {
                                     console.error('Failed to eliminate player:', response.data.message);
                                 }
@@ -184,8 +200,8 @@ const Game = () => {
                 });
             }
 
-            const updateReportButtonState = (isEnabled) => {
-                if (scene.reportBtn) {
+            const updateReportButtonState = function(isEnabled) {
+                if (this.reportBtn && this.reportBtn.setTexture) {
                     if (isEnabled) {
                         this.reportBtn.setTexture('reportBtnEnabled');
                         this.reportBtn.setInteractive();
@@ -196,7 +212,7 @@ const Game = () => {
                         this.reportBtn.setScale(0.15);
                     }
                 }
-            }
+            }.bind(this);
 
             this.reportBtn = this.add.image(1450, 560, 'reportBtnDisabled');
             this.reportBtn.setInteractive();
@@ -211,19 +227,15 @@ const Game = () => {
 
                     if (isConnected) {
                         console.log('Emergency meeting initiated via report button');
-                        emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {});
-                    }
-                    try {
-                        const response = axios.post(`http://localhost:8083/api/voting/initiateVoting/${roomId}`, () => {
-                            console.log(response.data)
+                        emergencyStompClient.publish({
+                            destination: `/app/emergencyMeeting/${roomId}`,
+                            body: ''
                         });
-                    } catch (error) {
-                        console.error('Error initiating voting:', error);
                     }
                 }
             });
 
-            const localPlayer = createPlayerSprite(scene, playerId, username, PLAYER_START_X, PLAYER_START_Y, true, localPlayerRole);
+            const localPlayer = createPlayerSprite(scene, playerId, username, PLAYER_START_X, PLAYER_START_Y, true, localPlayerRole, playerStatus);
             players.current.set(playerId, localPlayer);
 
             TASK_POSITIONS.forEach((pos) => {
@@ -242,15 +254,10 @@ const Game = () => {
             emergencyButton.on('pointerdown', () => {
                 if (isConnected) {
                     console.log('Emergency button clicked');
-                    emergencyStompClient.send(`/app/emergencyMeeting/${roomId}`, () => {});
-                }
-
-                try {
-                    const response = axios.post(`http://localhost:8083/api/voting/initiateVoting/${roomId}`, () => {
-                        console.log(response.data)
+                    emergencyStompClient.publish({
+                        destination: `/app/emergencyMeeting/${roomId}`,
+                        body: ''
                     });
-                } catch (error) {
-                    console.error('Error initiating voting:', error);
                 }
             });
 
@@ -284,10 +291,10 @@ const Game = () => {
                 }
             });
 
-            movementStompClientRef.current.connect({}, () => {
+            if (isMovementConnected){
                 console.log("Movement WebSocket connected");
 
-                movementStompClientRef.current.subscribe(`/topic/move/${roomId}`, (message) => {
+                movementStompClient.subscribe(`/topic/move/${roomId}`, (message) => {
                     const playerPosition = JSON.parse(message.body);
                     console.log('Received player position from server:', playerPosition);
                     console.log('All players:', players.current);
@@ -332,24 +339,30 @@ const Game = () => {
                     }
                 });
 
-                movementStompClientRef.current.subscribe(`/topic/eliminatePlayer/${roomId}`, (message) => {
+                movementStompClient.subscribe(`/topic/eliminatePlayer/${roomId}`, (message) => {
                     const eliminationData = JSON.parse(message.body);
                     const eliminatedPlayerId = eliminationData.playerId;
                     console.log('Player eliminated via WebSocket:', eliminatedPlayerId);
 
                     const playerData = players.current.get(eliminatedPlayerId);
                     if (playerData && playerData.sprite) {
-                        playerData.sprite.setTexture('deadPlayer');
-                        playerData.sprite.anims.stop();
-                        playerData.sprite.update();
-                        playerData.status = "DEAD";
-                        console.log('Player data after setting status to DEAD:', playerData);
+                        if (playerData.sprite.texture.key !== 'deadPlayer') {
+                            console.log('Changing texture to deadPlayer for player:', eliminatedPlayerId);
+                            playerData.sprite.setTexture('deadPlayer');
+                            if (playerData.sprite.anims){
+                                playerData.sprite.anims.stop();
+                            }
+                            playerData.sprite.update();
+                            playerData.status = "DEAD";
+                            sessionStorage.setItem('playerStatus', 'DEAD')
+                            console.log('Player data after setting status to DEAD:', playerData);
+                        }
                     } else {
                         console.warn('Player data or sprite not found for:', eliminatedPlayerId);
                     }
                 });
 
-                movementStompClientRef.current.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
+                movementStompClient.subscribe(`/topic/moveEnd/${roomId}`, (message) => {
                     const endMove = JSON.parse(message.body);
                     const playerData = players.current.get(endMove.playerId);
                     if (playerData && playerData.sprite) {
@@ -357,23 +370,29 @@ const Game = () => {
                     }
                 });
 
-                movementStompClientRef.current.subscribe('/topic/leave', (message) => {
+                movementStompClient.subscribe('/topic/leave', (message) => {
                     const disconnectedPlayer = JSON.parse(message.body);
                     removePlayerSprite(disconnectedPlayer.playerId);
                 });
-            });
+            }
+
 
             if (isGameRoomConnected) {
                 console.log('Subscribing to game room:', roomId);
-                console.log('Current player id:', playerId);
-                console.log(typeof playerId);
+
+                gameRoomStompClient.subscribe(`/topic/gameResult/${roomId}`, (message) => {
+                    const gameResult = JSON.parse(message.body);
+                    console.log('Game result:', gameResult);
+                    alert('Game over! The winners are the: ' + gameResult.winner);
+                    navigate('/rooms');
+                });
 
                 gameRoomStompClient.subscribe(`/topic/join/${roomId}`, (message) => {
                     const playerData = JSON.parse(message.body);
                     console.log('Player joined:', playerData);
 
                     playerData.currentPlayers.forEach(currentPlayer => {
-                        if (currentPlayer.status === "ALIVE" && !players.current.has(currentPlayer.playerId)) {
+                        if ((currentPlayer.status === "ALIVE" || currentPlayer.status === "GHOST") && !players.current.has(currentPlayer.playerId)) {
                             console.log('Current player:', currentPlayer);
                             const newPlayer = createPlayerSprite(
                                 scene,
@@ -382,11 +401,13 @@ const Game = () => {
                                 currentPlayer.x,
                                 currentPlayer.y,
                                 currentPlayer.flip,
-                                currentPlayer.role
+                                currentPlayer.role,
+                                currentPlayer.status
                             );
+
                             players.current.set(currentPlayer.playerId, newPlayer);
                         } else {
-                            console.log('Player already exists or is not alive:', currentPlayer.playerId, currentPlayer.status);
+                            console.log('Player already exists and his status is:', currentPlayer.playerId, currentPlayer.status);
                         }
                     });
                 });
@@ -396,7 +417,7 @@ const Game = () => {
                         const currentPlayers = response.data;
                         console.log('Current players:', currentPlayers);
                         currentPlayers.forEach(currentPlayer => {
-                            if (currentPlayer.status === "ALIVE" && !players.current.has(currentPlayer.playerId)) {
+                            if ((currentPlayer.status === "ALIVE" || currentPlayer.status === "GHOST") && !players.current.has(currentPlayer.playerId)) {
                                 console.log('Current player:', currentPlayer);
                                 const newPlayer = createPlayerSprite(
                                     scene,
@@ -405,11 +426,13 @@ const Game = () => {
                                     currentPlayer.x,
                                     currentPlayer.y,
                                     currentPlayer.flip,
-                                    currentPlayer.role
+                                    currentPlayer.role,
+                                    currentPlayer.status
                                 );
+
                                 players.current.set(currentPlayer.playerId, newPlayer);
                             } else {
-                                console.log('Player already exists or is not alive:', currentPlayer.playerId, currentPlayer.status);
+                                console.log('Player already exists and his status is:', currentPlayer.playerId, currentPlayer.status);
                             }
                         });
                     })
@@ -428,7 +451,7 @@ const Game = () => {
 
                 emergencyStompClient.subscribe(`/topic/emergencyMeetingEnd/${roomId}`, (message) => {
                     console.log('Emergency meeting ended:', message.body);
-                    handleEmergencyMeetingEnd().then(r => console.log('Emergency meeting ended'));
+                    handleEmergencyMeetingEnd(this);
                 });
             }
         }
@@ -444,6 +467,15 @@ const Game = () => {
                         if (playerData.text.x !== x || playerData.text.y !== y - 50) {
                             playerData.text.setPosition(x, y - 50);
                         }
+
+                        // Hide ghosts from players who are alive
+                        if (localPlayerData.status === 'ALIVE' && playerData.status === 'GHOST') {
+                            playerData.sprite.setVisible(false);
+                            playerData.text.setVisible(false);
+                        } else {
+                            playerData.sprite.setVisible(true);
+                            playerData.text.setVisible(true);
+                        }
                     }
                 });
 
@@ -453,22 +485,33 @@ const Game = () => {
                 } else {
                     if (localPlayerData.movedLastFrame) {
                         if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                            movementStompClientRef.current.send('/app/moveEnd', JSON.stringify({
-                                username: username,
-                                roomId: roomId,
-                                playerId: playerId
-                            }), {});
+                            movementStompClientRef.current.publish({
+                                destination: '/app/moveEnd',
+                                body: JSON.stringify({
+                                    username: username,
+                                    roomId: roomId,
+                                    playerId: playerId
+                                })
+                            });
                         }
                         localPlayerData.movedLastFrame = false;
                     }
                 }
 
-                animateMovement(pressedKeys.current, localPlayerData.sprite);
+                animateMovement(pressedKeys.current, localPlayerData.sprite, localPlayerData.status);
                 players.current.forEach((playerData) => {
-                    if (playerData.sprite && playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
-                        playerData.sprite.play('running');
-                    } else if (playerData.sprite && !playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
-                        playerData.sprite.stop('running');
+                    if (playerData.status === 'ALIVE') {
+                        if (playerData.sprite && playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
+                            playerData.sprite.play('running');
+                        } else if (playerData.sprite && !playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
+                            playerData.sprite.stop('running');
+                        }
+                    } else if (playerData.status === 'GHOST') {
+                        if (playerData.sprite && playerData.sprite.moving && !playerData.sprite.anims.isPlaying) {
+                            playerData.sprite.play('floating');
+                        } else if (!playerData.sprite.moving && playerData.sprite.anims.isPlaying) {
+                            playerData.sprite.stop('floating');
+                        }
                     }
                 });
             } else {
@@ -496,8 +539,6 @@ const Game = () => {
                     sendMove('RIGHT', false, localPlayerData.status);
                     playerMoved = true;
                 }
-            } else {
-                console.warn('Player is dead and cannot move:', localPlayerData)
             }
             return playerMoved;
         }
@@ -505,36 +546,54 @@ const Game = () => {
         function sendMove(direction, flip, status) {
             const localPlayerData = players.current.get(playerId);
             if (localPlayerData && localPlayerData.sprite) {
-                if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                    movementStompClientRef.current.send('/app/move', JSON.stringify({
-                        playerId: playerId,
-                        direction: direction,
-                        positionX: localPlayerData.sprite.x,
-                        positionY: localPlayerData.sprite.y,
-                        flip: flip,
-                        roomId: roomId,
-                        sessionId: sessionId,
-                        username: username,
-                        status: status
-                    }), {});
+                if (isMovementConnected) {
+                    movementStompClient.publish({
+                        destination: '/app/move',
+                        body: JSON.stringify({
+                            playerId: playerId,
+                            direction: direction,
+                            positionX: localPlayerData.sprite.x,
+                            positionY: localPlayerData.sprite.y,
+                            flip: flip,
+                            roomId: roomId,
+                            sessionId: sessionId,
+                            username: username,
+                            status: status
+                        })
+                    });
                 }
             } else {
                 console.warn('Local player data or sprite is undefined during move');
             }
         }
 
-        function animateMovement(keys, sprite) {
+        function animateMovement(keys, sprite, status) {
             const runningKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-            if (keys.some((key) => runningKeys.includes(key)) && !sprite.anims.isPlaying) {
-                sprite.play('running');
-            } else if (!keys.some((key) => runningKeys.includes(key)) && sprite.anims.isPlaying) {
-                sprite.stop('running');
+            if (status === 'ALIVE') {
+                if (keys.some((key) => runningKeys.includes(key)) && !sprite.anims.isPlaying) {
+                    sprite.play('running');
+                } else if (!keys.some((key) => runningKeys.includes(key)) && sprite.anims.isPlaying) {
+                    sprite.stop('running');
+                }
+            } else if (status === 'GHOST') {
+                if (keys.some((key) => runningKeys.includes(key)) && !sprite.anims.isPlaying) {
+                    sprite.play('floating');
+                } else if (!keys.some((key) => runningKeys.includes(key)) && sprite.anims.isPlaying) {
+                    sprite.stop('floating');
+                }
             }
         }
 
-        function createPlayerSprite(scene, playerId, username, x, y, flip, role) {
-            console.log('Creating player sprite with username:', username, 'and role:', role);
-            let newPlayerSprite = scene.add.sprite(x, y, 'player');
+        function createPlayerSprite(scene, playerId, username, x, y, flip, role, status) {
+            console.log('Creating player sprite with username:', username, 'and role:', role, 'and status:', status);
+            let newPlayerSprite;
+
+            if (status === 'GHOST') {
+                newPlayerSprite = scene.add.sprite(x, y, 'ghostPlayer');
+            } else {
+                newPlayerSprite = scene.add.sprite(x, y, 'player');
+            }
+
             newPlayerSprite.displayHeight = PLAYER_HEIGHT;
             newPlayerSprite.displayWidth = PLAYER_WIDTH;
             newPlayerSprite.moving = false;
@@ -542,10 +601,16 @@ const Game = () => {
             newPlayerSprite.y = y;
             newPlayerSprite.flipX = flip;
 
+            const localPlayerRole = sessionStorage.getItem('localPlayerRole');
+
             let textColor = '#ffffff';
-            if (role === 'IMPOSTER') {
-                textColor = role === 'IMPOSTER' ? '#ff0000' : '#ffffff';
-            } else if (role === 'CREWMATE') {
+            if (localPlayerRole === 'IMPOSTER') {
+                if (role === 'IMPOSTER') {
+                    textColor = '#ff0000';
+                } else {
+                    textColor = '#ffffff';
+                }
+            } else {
                 textColor = '#ffffff';
             }
 
@@ -571,7 +636,7 @@ const Game = () => {
                 text: newPlayerText,
                 playerId: playerId,
                 username: username,
-                status: 'ALIVE'
+                status: status
             };
         }
 
@@ -614,42 +679,73 @@ const Game = () => {
             }
         }
 
-        async function handleEmergencyMeetingEnd() {
+        async function handleEmergencyMeetingEnd(scene) {
+            console.log('Handling emergency meeting end');
             try {
-                const response = await axios.get(`http://localhost:8083/api/gameRooms/getDeadPlayersByRoomId/${roomId}`);
+                const response = await axios.get(`http://localhost:8081/api/gameRooms/getDeadPlayersByRoomId/${roomId}`);
                 const deadPlayers = response.data;
+                const playerIds = deadPlayers.map(player => player.playerId.toString());
 
-                deadPlayers.forEach(playerId => {
-                    const playerData = players.current.get(playerId);
+                playerIds.forEach(playerIdStr => {
+                    const playerData = players.current.get(playerIdStr);
+                    console.log('Player data:', playerData);
                     if (playerData) {
                         playerData.status = 'GHOST';
-                        setPlayerToGhostMode(playerData);
+                        setPlayerToGhostMode(playerData, scene);
                     }
+                    console.log('Dead players:', deadPlayers);
                 });
             } catch (error) {
                 console.error('Error fetching dead players:', error);
             }
         }
 
-        function setPlayerToGhostMode(playerData) {
+        async function setPlayerToGhostMode(playerData, scene) {
+            console.log('Setting player to ghost mode:', playerData);
+            const playerId = playerData.playerId;
+
+            try {
+                const eliminateResponse = await axios.post('http://localhost:8081/api/gameRooms/setPlayerToGhost', {
+                    gameRoomId: roomId,
+                    votedPlayerId: playerId
+                });
+                console.log('Player set to ghost: ', eliminateResponse.data);
+            } catch (error) {
+                console.error('Error setting player to dead:', error);
+            }
+
             if (playerData && playerData.sprite) {
-                playerData.sprite.setTexture('ghostPlayer');
-                playerData.sprite.anims.play('floating');
-                playerData.sprite.setFlipX(false);
-                playerData.sprite.setDepth(1);
+                console.log('Changing sprite to ghostPlayer for player:', playerId);
+
+                const oldSprite = playerData.sprite;
+
+
+                // Create a new sprite with the 'ghostPlayer' spritesheet
+                const newSprite = scene.add.sprite(oldSprite.x, oldSprite.y, 'ghostPlayer');
+                newSprite.displayHeight = PLAYER_HEIGHT;
+                newSprite.displayWidth = PLAYER_WIDTH;
+                newSprite.setFlipX(oldSprite.flipX);
+                newSprite.setDepth(oldSprite.depth);
+
+                oldSprite.destroy();
+
+                playerData.sprite = newSprite;
+
+                // Play the floating animation
+                    newSprite.anims.play('floating');
+
                 console.log('Player set to ghost mode:', playerData);
             } else {
                 console.warn('Player data or sprite not found for:', playerData);
             }
         }
 
+
+
         return () => {
-            if (movementStompClientRef.current && movementStompClientRef.current.connected) {
-                movementStompClientRef.current.disconnect();
-            }
             game.destroy(true);
         };
-    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate, isConnected, playerRoleList, emergencyStompClient, isGameRoomConnected, gameRoomStompClient]);
+    }, [jwtToken, playerId, roles, roomId, sessionId, username, navigate, isConnected, playerRoleList, emergencyStompClient, isGameRoomConnected, gameRoomStompClient, playerStatus, isMovementConnected, movementStompClient]);
 
     return (
         <div id="game-container">
