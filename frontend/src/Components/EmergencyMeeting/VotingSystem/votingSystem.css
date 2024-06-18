@@ -54,31 +54,31 @@
     right: 20px;
     width: 100px;
     height: 100px;
-    background-image: url('./chat-button.png'); /* Path to your image */
-    background-size: cover; /* Ensure the image covers the button */
+    background-image: url('./chat-button.png');
+    background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
     background-color: transparent;
     border: none;
     cursor: pointer;
-    outline: none; /* Remove the default outline on focus */
-    border-radius: 50%; /* Make the button circular, adjust as needed */
-    transition: transform 0.2s; /* Smooth hover effect */
+    outline: none;
+    border-radius: 50%;
+    transition: transform 0.2s;
 }
 
 .chat-voting-button:hover {
-    transform: scale(1.1); /* Slight zoom on hover */
+    transform: scale(1.1);
 }
 
 .voting-container {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center; /* Align items to the top */
+    justify-content: center;
     align-items: flex-start;
-    margin-top: 100px; /* Adjust this value if needed */
+    margin-top: 100px;
     padding-bottom: 5px;
     width: 100%;
-    flex-grow: 1; /* Allow it to take up available space */
+    flex-grow: 1;
 }
 
 .voting-player-card {
@@ -192,7 +192,7 @@
     width: 25px;
     margin-right: 3px;
     opacity: 0;
-    animation: fadeIn 0.5s forwards; /* Apply animation */
+    animation: fadeIn 0.5s forwards;
 }
 
 .voting-player-icon:nth-child(1) {

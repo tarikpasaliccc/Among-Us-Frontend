@@ -7,6 +7,10 @@ import RoomList from "./Components/roomsList/RoomsList";
 import RoomPage from "./Components/roomPage/RoomPage";
 import {WebSocketProvider} from "./Context/WebSocketContext";
 import VotingSystem from "./Components/EmergencyMeeting/VotingSystem/VotingSystem";
+import VoteResult from './Components/EmergencyMeeting/VotingSystem/VoteResult/VoteResult';
+import GameResult from './Components/GameResult/GameResult'; // Import GameResult
+
+
 
 const App = () => {
 
@@ -21,6 +25,8 @@ const App = () => {
                         <Route path="/rooms" element={<RoomList/>}/>
                         <Route path="/room/:roomId" element={<RoomPage/>}/>
                         <Route path="/emergencyMeeting" element={<VotingSystem/>}/>
+                        <Route path="/voteResult" element={<VoteResult />} />
+                        <Route path="/gameResult" element={<GameResult />} />
                     </Routes>
                 </div>
             </Router>
@@ -30,3 +36,4 @@ const App = () => {
 }
 
 export default App;
+

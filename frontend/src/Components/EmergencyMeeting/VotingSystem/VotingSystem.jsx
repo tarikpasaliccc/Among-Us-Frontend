@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import "./votingSystem.css";
-import axios from "axios";
-import playerIcon from "./playerIcon.png";
-import Chat from "../Chat/Chat";
-import { useNavigate } from "react-router-dom";
-import { useWebSocket } from "../../../Context/WebSocketContext";
+import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './votingSystem.css';
+import playerIcon from './playerIcon.png';
+import Chat from '../Chat/Chat';
+import { useWebSocket } from '../../../Context/WebSocketContext';
 
 const VotingSystem = () => {
     const [players, setPlayers] = useState([]);
@@ -12,10 +12,9 @@ const VotingSystem = () => {
     const [chatHistory, setChatHistory] = useState([]);
     const [votes, setVotes] = useState({});
     const [userVote, setUserVote] = useState(null);
-    const [votedOut, setVotedOut] = useState(null);
     const [skipVoteCount, setSkipVoteCount] = useState(0);
     const [voteResults, setVoteResults] = useState({});
-    const [countdown, setCountdown] = useState(60);
+    const [countdown, setCountdown] = useState(3); // Shorter countdown duration
     const { emergencyStompClient, isConnected } = useWebSocket();
     const navigate = useNavigate();
 
@@ -29,7 +28,7 @@ const VotingSystem = () => {
         try {
             console.log('Fetching players which are alive:', roomId);
             const response = await axios.get(`http://localhost:8081/api/gameRooms/getAlivePlayersByRoomId/${roomId}`);
-            console.log('Alive players:', response);
+            console.log('Alive players:', response.data);
             setPlayers(response.data);
         } catch (error) {
             console.error('Error fetching room data:', error);
@@ -37,20 +36,25 @@ const VotingSystem = () => {
     }, [roomId]);
 
     useEffect(() => {
-        fetchChatRoomData().then(r => console.log('Fetched chat room data'));
-        console.log("This is the player status: ", playerStatus);
-        console.log("These are the players which are alive: ", players);
+        fetchChatRoomData().then(() => console.log('Fetched chat room data'));
 
         const timer = setInterval(() => {
             setCountdown(prevCountdown => {
                 if (prevCountdown <= 1) {
                     clearInterval(timer);
-                    handleVotingEnd().then(r => console.log('Voting ended'));
+                    console.log('Countdown finished, navigating to VoteResult');
+                    handleVotingEnd()
+                        .then(() => {
+                            console.log('Finished handling voting end.');
+                        })
+                        .catch(error => {
+                            console.error('Error in handleVotingEnd:', error);
+                        });
                     return 0;
                 }
                 return prevCountdown - 1;
             });
-        }, 1000);
+        }, 1000); // 1000 ms = 1 second
 
         return () => clearInterval(timer);
     }, [fetchChatRoomData]);
@@ -63,18 +67,15 @@ const VotingSystem = () => {
             const result = response.data;
             console.log('Vote result:', result);
 
-
-            if (result.status === "skipped" || result.status === "tie") {
-                setVoteResults({});
-                setVotedOut("skip");
-                sessionStorage.setItem('playerStatus', playerStatus === 'DEAD' || playerStatus === 'GHOST' ? 'GHOST' : 'ALIVE');
-                alert(result.status === "skipped" ? "Voting was skipped, no player was ejected." : "There was a tie, no player was ejected.");
-            } else {
-                setVoteResults(result.voteCount);
-                setVotedOut(result.mostVotedPlayerId);
-                sessionStorage.setItem('playerStatus', result.mostVotedPlayerId === playerId ? 'GHOST' : 'ALIVE');
-                alert(`Player ${result.mostVotedPlayerUsername} was ejected. He was an ${result.mostVotedPlayerRole}!`);
+            let wasImpostor = false;
+            if (result.status !== "skipped" && result.status !== "tie") {
+                wasImpostor = result.mostVotedPlayerRole === 'Impostor';
             }
+
+            const playerName = result.mostVotedPlayerUsername || 'No one';
+            console.log('Navigating to /voteResult with state:', { playerName, wasImpostor });
+            navigate('/voteResult', { state: { result: { playerName, wasImpostor } } });
+
         } catch (error) {
             console.error('Error fetching vote results:', error);
         }
@@ -85,9 +86,6 @@ const VotingSystem = () => {
                 destination: `/app/emergencyMeetingEnd/${roomId}`,
                 body: ''
             });
-            setTimeout(() => {
-                navigate('/game');
-            }, 5000);
         } else {
             console.error('Websocket is not connected');
         }
@@ -97,7 +95,7 @@ const VotingSystem = () => {
         const playerRoles = JSON.parse(playerRoleList);
         let targetPlayerRole = null;
         for (let i = 0; i < playerRoles.length; i++) {
-            if (playerRoles[i].playerId == targetPlayerId) {
+            if (playerRoles[i].playerId === targetPlayerId) {
                 targetPlayerRole = playerRoles[i].role;
                 break;
             }
@@ -125,7 +123,7 @@ const VotingSystem = () => {
                     targetPlayerUsername: targetPlayerUsername,
                     targetPlayerRole: targetPlayerRole
                 }).then(response => {
-                    console.log('Vote removal response:', response);
+                    console.log('Vote removal response:', response.data);
                 }).catch(error => {
                     console.error('Error removing vote:', error);
                 });
@@ -140,7 +138,7 @@ const VotingSystem = () => {
                     targetPlayerUsername: targetPlayerUsername,
                     targetPlayerRole: targetPlayerRole
                 }).then(response => {
-                    console.log('Vote response:', response);
+                    console.log('Vote response:', response.data);
                 }).catch(error => {
                     console.error('Error casting vote:', error);
                 });
@@ -162,7 +160,7 @@ const VotingSystem = () => {
                 targetPlayerUsername: null,
                 targetPlayerRole: null
             }).then(response => {
-                console.log('Skip vote removal response:', response);
+                console.log('Skip vote removal response:', response.data);
             }).catch(error => {
                 console.error('Error removing skip vote:', error);
             });
@@ -180,11 +178,11 @@ const VotingSystem = () => {
                 gameRoom: roomId,
                 voterId: playerId,
                 voterUsername: localUsername,
-                targetPlayerId: "skip" ,
+                targetPlayerId: "skip",
                 targetPlayerUsername: null,
                 targetPlayerRole: null
             }).then(response => {
-                console.log('Skip vote response:', response);
+                console.log('Skip vote response:', response.data);
             }).catch(error => {
                 console.error('Error skipping vote:', error);
             });
@@ -223,7 +221,7 @@ const VotingSystem = () => {
                             onClick={skipVote}
                             disabled={playerStatus !== 'ALIVE'}
                     >
-                    Skip Vote
+                        Skip Vote
                     </button>
                 </div>
                 <div className="countdown-timer">Voting ends in: {countdown}s</div>
@@ -236,6 +234,6 @@ const VotingSystem = () => {
             />}
         </div>
     );
-}
+};
 
 export default VotingSystem;

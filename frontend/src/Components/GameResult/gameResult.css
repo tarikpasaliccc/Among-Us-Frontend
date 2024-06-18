@@ -1,0 +1,40 @@
+.result-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.background-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+}
+
+.result-box {
+    text-align: center;
+    color: white;
+}
+
+.result-text {
+    font-size: 8em;
+    font-weight: bold;
+    font-family: 'advancedPixel', sans-serif;
+}
+
+.result-text.crewmate {
+    color: chartreuse;
+}
+
+.result-text.impostor {
+    color: red;
+}

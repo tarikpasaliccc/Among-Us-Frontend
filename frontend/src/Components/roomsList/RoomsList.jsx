@@ -3,7 +3,6 @@ import axios from "axios";
 import {useNavigate} from "react-router-dom";
 import "./rooms.css"
 import reloadImage from "../roomPage/reload-btn.png";
-import "./rooms.css";
 import homeicon from "./home-icon.png";
 
 function RoomList() {
@@ -171,7 +170,7 @@ function RoomList() {
                                 onKeyDown={handleKeyPress}
                             />
                             <button onClick={handleCreateRoom} className="createRoom-btn">create</button>
-                            <button onClick={() => setIsModalOpen(false)} className="cancel-btn">delete</button>
+                            <button onClick={() => setIsModalOpen(false)} className="cancel-btn">cancel</button>
                         </div>
                     )}
 

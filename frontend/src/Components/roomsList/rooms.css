@@ -115,9 +115,9 @@
 }
 
 .button-container {
-    position: absolute; /* Absolute Positionierung */
-    top: 20px; /* Abstand von oben */
-    right: 20px; /* Abstand von rechts */
+    position: absolute;
+    top: 20px;
+    right: 20px;
     display: flex;
     justify-content: flex-end;
     padding: 0 10px;
@@ -257,7 +257,7 @@ input[type="text"] {
 
 input[type="text"]:hover {
     border-color: darkred;
-    box-shadow: none !important; /* Schatten entfernen */
+    box-shadow: none !important;
 }
 
 @keyframes rotate {

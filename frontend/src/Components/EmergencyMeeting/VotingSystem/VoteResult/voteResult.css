@@ -1,0 +1,51 @@
+.result-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    background-color: black;
+    overflow: hidden;
+}
+
+.background-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+}
+
+.result-box {
+    text-align: center;
+    z-index: 1;
+}
+
+.result-text {
+    font-size: 4rem;
+    font-family: 'advancedPixel', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    border-right: .15em solid white;
+    animation: typing 2s steps(30, end), blink-caret .75s step-end infinite;
+}
+
+@keyframes typing {
+    from { width: 0 }
+    to { width: 100% }
+}
+
+@keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: white; }
+}
+
+.red-text {
+    color: red;
+}
